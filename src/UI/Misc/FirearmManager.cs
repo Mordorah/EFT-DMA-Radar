@@ -215,6 +215,7 @@ namespace LoneEftDmaRadar.UI.Misc
 
         /// <summary>
         /// Reads current ammo count and type from weapon's magazine.
+        /// Iterates all items in magazine (handles split stacks) and checks chambers for +1.
         /// </summary>
         private void ReadAmmoInfo(ulong handsController, out int currentAmmo, out int maxAmmo, out string ammoTypeName)
         {
@@ -229,46 +230,84 @@ namespace LoneEftDmaRadar.UI.Misc
                 if (!MemDMA.IsValidVirtualAddress(itemBase))
                     return;
 
-                // Read the magazine slot
+                // Read the magazine slot → magazine item → cartridges (StackSlot)
                 var magSlot = MemoryInterface.Memory.ReadPtr(itemBase + Offsets.LootItemWeapon._magSlotCache, false);
                 if (!MemDMA.IsValidVirtualAddress(magSlot))
                     return;
-
-                // Read the magazine item from slot
                 var magItem = MemoryInterface.Memory.ReadPtr(magSlot + Offsets.Slot.ContainedItem, false);
                 if (!MemDMA.IsValidVirtualAddress(magItem))
                     return;
-
-                // Read cartridges (StackSlot) from magazine
                 var cartridges = MemoryInterface.Memory.ReadPtr(magItem + Offsets.Item.Cartridges, false);
                 if (!MemDMA.IsValidVirtualAddress(cartridges))
                     return;
 
-                // Read max ammo from StackSlot.Max
+                // Read max ammo capacity
                 maxAmmo = MemoryInterface.Memory.ReadValue<int>(cartridges + Offsets.StackSlot.Max, false);
 
-                // Read items list from StackSlot.Items
+                // Iterate all items in magazine and sum StackCount (handles split stacks)
+                ulong firstAmmoItem = 0;
                 var itemsList = MemoryInterface.Memory.ReadPtr(cartridges + Offsets.StackSlot.Items, false);
-                if (!MemDMA.IsValidVirtualAddress(itemsList))
-                    return;
+                if (MemDMA.IsValidVirtualAddress(itemsList))
+                {
+                    int itemCount = MemoryInterface.Memory.ReadValue<int>(itemsList + 0x18, false); // List<T>._size
+                    if (itemCount > 0)
+                    {
+                        var listArray = MemoryInterface.Memory.ReadPtr(itemsList + 0x10, false); // List<T>._items
+                        if (MemDMA.IsValidVirtualAddress(listArray))
+                        {
+                            int maxItems = Math.Min(itemCount, 10); // Cap iteration
+                            for (int i = 0; i < maxItems; i++)
+                            {
+                                var ammoPtr = MemoryInterface.Memory.ReadPtr(listArray + 0x20 + (ulong)(i * 8), false);
+                                if (MemDMA.IsValidVirtualAddress(ammoPtr))
+                                {
+                                    if (firstAmmoItem == 0)
+                                        firstAmmoItem = ammoPtr;
+                                    currentAmmo += MemoryInterface.Memory.ReadValue<int>(ammoPtr + Offsets.Item.StackCount, false);
+                                }
+                            }
+                        }
+                    }
+                }
 
-                // Read the internal array from List<T> (offset 0x10)
-                var listItems = MemoryInterface.Memory.ReadPtr(itemsList + 0x10, false);
-                if (!MemDMA.IsValidVirtualAddress(listItems))
-                    return;
-
-                // Read first ammo item (offset 0x20 from array base)
-                var firstAmmoItem = MemoryInterface.Memory.ReadPtr(listItems + 0x20, false);
-                if (!MemDMA.IsValidVirtualAddress(firstAmmoItem))
-                    return;
-
-                // Read current ammo count from Item.StackCount
-                currentAmmo = MemoryInterface.Memory.ReadValue<int>(firstAmmoItem + Offsets.Item.StackCount, false);
-
-                // Read ammo type name from template
+                // Check chambers for +1 bullet
+                ulong chamberBullet = 0;
                 try
                 {
-                    var ammoTemplate = MemoryInterface.Memory.ReadPtr(firstAmmoItem + Offsets.LootItem.Template, false);
+                    var chambersArr = MemoryInterface.Memory.ReadPtr(itemBase + Offsets.LootItemWeapon.Chambers, false);
+                    if (MemDMA.IsValidVirtualAddress(chambersArr))
+                    {
+                        int chamberCount = MemoryInterface.Memory.ReadValue<int>(chambersArr + 0x18, false);
+                        if (chamberCount > 0)
+                        {
+                            var chamberSlot = MemoryInterface.Memory.ReadPtr(chambersArr + 0x20, false);
+                            if (MemDMA.IsValidVirtualAddress(chamberSlot))
+                            {
+                                chamberBullet = MemoryInterface.Memory.ReadValue<ulong>(chamberSlot + Offsets.Slot.ContainedItem, false);
+                                if (chamberBullet != 0)
+                                    currentAmmo++;
+                            }
+                        }
+                    }
+                }
+                catch { }
+
+                // Sanity validation
+                if (maxAmmo <= 0 || maxAmmo > 200 || currentAmmo < 0 || currentAmmo > maxAmmo + 1)
+                {
+                    currentAmmo = 0;
+                    maxAmmo = 0;
+                    return;
+                }
+
+                // Read ammo type name from first available round (magazine or chamber)
+                try
+                {
+                    var roundForLookup = firstAmmoItem != 0 ? firstAmmoItem : chamberBullet;
+                    if (roundForLookup == 0)
+                        return;
+
+                    var ammoTemplate = MemoryInterface.Memory.ReadPtr(roundForLookup + Offsets.LootItem.Template, false);
                     if (MemDMA.IsValidVirtualAddress(ammoTemplate))
                     {
                         var ammoIdPtr = MemoryInterface.Memory.ReadValue<MongoID>(ammoTemplate + Offsets.ItemTemplate._id, false);
@@ -279,10 +318,7 @@ namespace LoneEftDmaRadar.UI.Misc
                         }
                     }
                 }
-                catch
-                {
-                    // Ammo type lookup failed, but we still have count
-                }
+                catch { }
             }
             catch
             {

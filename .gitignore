@@ -367,3 +367,6 @@ FodyWeavers.xsd
 
 # Large dump files
 src/dump.cs
+
+# Windows NUL device artifact
+nul
