@@ -62,11 +62,11 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player.Helpers
         /// </summary>
         PScav,
         /// <summary>
-        /// 'Special' Human Controlled Hostile PMC/Scav (deprecated - watchlist no longer functional).
+        /// Human Controlled Hostile PMC/Scav flagged via Watchlist.
         /// </summary>
         SpecialPlayer,
         /// <summary>
-        /// Human Controlled Hostile PMC/Scav that is a streamer (deprecated - no longer functional).
+        /// Human Controlled Hostile PMC/Scav that is a streamer (via Watchlist).
         /// </summary>
         Streamer
     }

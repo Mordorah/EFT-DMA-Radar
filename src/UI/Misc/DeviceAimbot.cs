@@ -109,6 +109,13 @@ namespace LoneEftDmaRadar.UI.Misc
         private string _lastTrackedTargetId;
         private volatile float _lastWorldSpeed;   // Magnitude of world velocity, used by hitscan grace scaling
 
+        // Ergo/sensitivity compensation — cached from memory reads
+        private volatile float _cachedOverweightAimMult = 1.0f; // PWA._overweightAimingMultiplier (carry weight)
+        private volatile float _cachedAimingSens = 1.0f; // FirearmController._aimingSens (weapon ergo + user ADS setting)
+        private volatile float _maxAimingSens = 0.4f; // Highest _aimingSens seen (reference baseline)
+        private long _ergoReadTimeTicks;
+        private static readonly long ErgoCacheDurationTicks = Stopwatch.Frequency / 10; // 100ms
+
         // Hitscan bone priority state
         private Bones _hitscanCurrentBone;         // Currently locked bone
         private long _hitscanBoneLockTick;         // Stopwatch tick when bone was locked
@@ -412,6 +419,10 @@ namespace LoneEftDmaRadar.UI.Misc
                     {
                         _debugStatus = $"Target {currentTarget.Name} - Ballistics OK";
                     }
+
+                    // 7.5) Update ergo compensation cache
+                    if (Config.ErgoCompensation)
+                        UpdateErgoCompensation(localPlayer);
 
                     // 8) Aim
                     AimAtTarget(localPlayer, currentTarget, fireportPosOpt);
@@ -1101,6 +1112,25 @@ private bool ShouldTargetPlayer(AbstractPlayer player, LocalPlayer localPlayer)
             float moveX = (deltaX * Kp * settleFactor + _targetScreenVelocity.X * Kd) * speedFactor;
             float moveY = (deltaY * Kp * settleFactor + _targetScreenVelocity.Y * Kd) * speedFactor;
 
+            // === Ergo/overweight compensation ===
+            // Only compensate for weapon ergo and carry weight — NOT zoom sensitivity.
+            // _aimingSens is cached at 1x (unscoped) to isolate the ergo component.
+            // Zoom sensitivity is already handled by the PD controller's screen-space error scaling.
+            if (isAiming && Config.ErgoCompensation)
+            {
+                float maxSens = _maxAimingSens;
+                if (maxSens > 0.01f)
+                {
+                    float ergoRatio = _cachedAimingSens / maxSens; // 1.0 for best weapon, <1.0 for worse
+                    float compensation = ergoRatio * _cachedOverweightAimMult; // combine with carry weight
+                    if (compensation > 0.01f && compensation < 0.99f)
+                    {
+                        moveX /= compensation;
+                        moveY /= compensation;
+                    }
+                }
+            }
+
             // Clamp to device limits (-127 to 127)
             moveX = Math.Clamp(moveX, -MAX_MOVE_PER_TICK, MAX_MOVE_PER_TICK);
             moveY = Math.Clamp(moveY, -MAX_MOVE_PER_TICK, MAX_MOVE_PER_TICK);
@@ -1378,6 +1408,69 @@ private bool ShouldTargetPlayer(AbstractPlayer player, LocalPlayer localPlayer)
             {
                 DebugLogger.LogDebug($"[DeviceAimbot] Prediction failed: {ex}");
                 return targetPos;
+            }
+        }
+
+        /// <summary>
+        /// Reads the overweight aiming multiplier from PWA.
+        /// This value represents how much EFT reduces turn speed when overweight/low ergo.
+        /// Cached with 100ms TTL to avoid per-tick memory reads.
+        /// </summary>
+        private void UpdateErgoCompensation(LocalPlayer localPlayer)
+        {
+            long nowTicks = _cacheTimer.ElapsedTicks;
+            if ((nowTicks - _ergoReadTimeTicks) < ErgoCacheDurationTicks)
+                return; // Cache still valid
+
+            _ergoReadTimeTicks = nowTicks;
+
+            try
+            {
+                ulong pwa = localPlayer.PWA;
+                if (!MemDMA.IsValidVirtualAddress(pwa))
+                {
+                    _cachedOverweightAimMult = 1.0f;
+                    _cachedAimingSens = 1.0f;
+                    return;
+                }
+
+                // Read overweight multiplier (carry weight penalty)
+                float mult = _memory.ReadValue<float>(pwa + Offsets.ProceduralWeaponAnimation._overweightAimingMultiplier, false);
+                if (float.IsNormal(mult) && mult is > 0f and <= 2f)
+                    _cachedOverweightAimMult = mult;
+                else
+                    _cachedOverweightAimMult = 1.0f;
+
+                // Read per-weapon aiming sensitivity (ergo-derived) via PWA -> FirearmController
+                // IMPORTANT: Only update when NOT scoped — _aimingSens includes zoom sensitivity
+                // and we only want the ergo component (1x/hipfire value).
+                if (!CameraManager.IsScoped)
+                {
+                    ulong fc = _memory.ReadPtr(pwa + Offsets.ProceduralWeaponAnimation._firearmController, false);
+                    if (MemDMA.IsValidVirtualAddress(fc))
+                    {
+                        float aimSens = _memory.ReadValue<float>(fc + Offsets.FirearmController._aimingSens, false);
+                        float prevSens = _cachedAimingSens;
+                        if (float.IsNormal(aimSens) && aimSens is > 0f and <= 2f)
+                        {
+                            _cachedAimingSens = aimSens;
+                            if (aimSens > _maxAimingSens)
+                                _maxAimingSens = aimSens;
+                            if (MathF.Abs(aimSens - prevSens) > 0.01f)
+                            {
+                                float ergoRatio = aimSens / _maxAimingSens;
+                                DebugLogger.LogDebug($"[DeviceAimbot] AimingSens: {aimSens:F3} | Max: {_maxAimingSens:F3} | ErgoRatio: {ergoRatio:F3} | OverweightMult: {_cachedOverweightAimMult:F3}");
+                            }
+                        }
+                        else
+                            _cachedAimingSens = 1.0f;
+                    }
+                }
+            }
+            catch
+            {
+                _cachedOverweightAimMult = 1.0f;
+                _cachedAimingSens = 1.0f;
             }
         }
 

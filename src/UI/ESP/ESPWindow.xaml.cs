@@ -2,6 +2,7 @@ using LoneEftDmaRadar.Misc;
 using LoneEftDmaRadar.Tarkov.GameWorld;
 using LoneEftDmaRadar.Tarkov.GameWorld.Exits;
 using LoneEftDmaRadar.Tarkov.GameWorld.Explosives;
+using LoneEftDmaRadar.Tarkov.GameWorld.Interactables;
 using LoneEftDmaRadar.Tarkov.GameWorld.Loot;
 using LoneEftDmaRadar.Tarkov.GameWorld.Quests;
 using LoneEftDmaRadar.Tarkov.GameWorld.Player;
@@ -102,6 +103,8 @@ namespace LoneEftDmaRadar.UI.ESP
         private static IReadOnlyCollection<AbstractPlayer> AllPlayers => Memory.Players;
 
         private static IReadOnlyCollection<IExitPoint> Exits => Memory.Exits;
+
+        private static IReadOnlyList<Door> Doors => Memory.Doors;
 
         private static IReadOnlyCollection<IExplosiveItem> Explosives => Memory.Explosives;
 
@@ -344,6 +347,12 @@ namespace LoneEftDmaRadar.UI.ESP
                                      }
                                 }
                             }
+                        }
+
+                        // Render Interactables (Doors, Switches, Card Readers)
+                        if (Doors is not null)
+                        {
+                            DrawInteractables(ctx, localPlayer, screenWidth, screenHeight);
                         }
 
                         if (Explosives is not null && App.Config.UI.EspTripwires)
@@ -646,6 +655,135 @@ namespace LoneEftDmaRadar.UI.ESP
 
                     float textOffset = 4f * scale;
                     ctx.DrawText(text, screen.X + textOffset, screen.Y + textOffset, color, DxTextSize.Small);
+                }
+            }
+        }
+
+        private static readonly DxColor _doorLockedColor = new(255, 60, 60, 255);
+        private static readonly DxColor _doorShutColor = new(255, 220, 50, 255);
+        private static readonly DxColor _doorOpenColor = new(100, 255, 100, 160);
+        private static readonly DxColor _doorKeyColor = new(255, 215, 0, 255);
+        private static readonly DxColor _switchColor = new(0, 220, 220, 255);
+        private static readonly DxColor _cardReaderColor = new(0, 220, 220, 255);
+        private static readonly DxColor _cardReaderLockedColor = new(255, 0, 255, 255);
+
+        private void DrawInteractables(Dx9RenderContext ctx, LocalPlayer localPlayer, float screenWidth, float screenHeight)
+        {
+            if (Doors is null)
+                return;
+
+            foreach (var door in Doors)
+            {
+                if (door.Position == Vector3.Zero)
+                    continue;
+
+                // Per-type ESP + radar config check
+                bool visible = door.Type switch
+                {
+                    InteractableType.Switch => App.Config.UI.EspSwitches && App.Config.Misc.ShowSwitches,
+                    InteractableType.CardReader => App.Config.UI.EspCardReaders && App.Config.Misc.ShowCardReaders,
+                    _ => App.Config.UI.EspDoors && App.Config.Misc.ShowDoors &&
+                         (door.IsLocked ? App.Config.Misc.ShowLockedDoors : App.Config.Misc.ShowUnlockedDoors)
+                };
+                if (!visible)
+                    continue;
+
+                // Distance cap (TODO: configurable sliders in GUI rework)
+                var dist = Vector3.Distance(localPlayer.Position, door.Position);
+                if (dist > 50f)
+                    continue;
+
+                if (!WorldToScreen2WithScale(door.Position, out var screen, out var scale, screenWidth, screenHeight))
+                    continue;
+
+                float markerSize = 3f * scale;
+                float textOffset = 5f * scale;
+
+                switch (door.Type)
+                {
+                    case InteractableType.Switch:
+                    {
+                        // Diamond marker
+                        var top = new SharpDX.Mathematics.Interop.RawVector2(screen.X, screen.Y - markerSize);
+                        var right = new SharpDX.Mathematics.Interop.RawVector2(screen.X + markerSize, screen.Y);
+                        var bottom = new SharpDX.Mathematics.Interop.RawVector2(screen.X, screen.Y + markerSize);
+                        var left = new SharpDX.Mathematics.Interop.RawVector2(screen.X - markerSize, screen.Y);
+                        ctx.DrawLine(top, right, _switchColor, 1.5f);
+                        ctx.DrawLine(right, bottom, _switchColor, 1.5f);
+                        ctx.DrawLine(bottom, left, _switchColor, 1.5f);
+                        ctx.DrawLine(left, top, _switchColor, 1.5f);
+
+                        string switchLabel = door.DoorState == EDoorState.Open ? "ON" : "Switch";
+                        ctx.DrawText(switchLabel, screen.X + textOffset, screen.Y, _switchColor, DxTextSize.Small);
+                        break;
+                    }
+                    case InteractableType.CardReader:
+                    {
+                        // Square marker
+                        var color = door.IsLocked ? _cardReaderLockedColor : _cardReaderColor;
+                        var tl = new SharpDX.Mathematics.Interop.RawVector2(screen.X - markerSize, screen.Y - markerSize);
+                        var tr = new SharpDX.Mathematics.Interop.RawVector2(screen.X + markerSize, screen.Y - markerSize);
+                        var br = new SharpDX.Mathematics.Interop.RawVector2(screen.X + markerSize, screen.Y + markerSize);
+                        var bl = new SharpDX.Mathematics.Interop.RawVector2(screen.X - markerSize, screen.Y + markerSize);
+                        ctx.DrawLine(tl, tr, color, 1.5f);
+                        ctx.DrawLine(tr, br, color, 1.5f);
+                        ctx.DrawLine(br, bl, color, 1.5f);
+                        ctx.DrawLine(bl, tl, color, 1.5f);
+
+                        string cardLabel = door.KeyName ?? (door.IsLocked ? "Card Reader" : "Unlocked");
+                        ctx.DrawText(cardLabel, screen.X + textOffset, screen.Y, color, DxTextSize.Small);
+                        break;
+                    }
+                    default:
+                    {
+                        // Locked = X (red), Shut = square (yellow), Open = diamond (green)
+                        var color = door.DoorState switch
+                        {
+                            EDoorState.Locked => _doorLockedColor,
+                            EDoorState.Open => _doorOpenColor,
+                            _ => _doorShutColor
+                        };
+
+                        switch (door.DoorState)
+                        {
+                            case EDoorState.Locked:
+                                // X
+                                ctx.DrawLine(
+                                    new SharpDX.Mathematics.Interop.RawVector2(screen.X - markerSize, screen.Y - markerSize),
+                                    new SharpDX.Mathematics.Interop.RawVector2(screen.X + markerSize, screen.Y + markerSize), color, 1f);
+                                ctx.DrawLine(
+                                    new SharpDX.Mathematics.Interop.RawVector2(screen.X + markerSize, screen.Y - markerSize),
+                                    new SharpDX.Mathematics.Interop.RawVector2(screen.X - markerSize, screen.Y + markerSize), color, 1f);
+                                break;
+                            case EDoorState.Open:
+                                // Diamond
+                                var top = new SharpDX.Mathematics.Interop.RawVector2(screen.X, screen.Y - markerSize);
+                                var right = new SharpDX.Mathematics.Interop.RawVector2(screen.X + markerSize, screen.Y);
+                                var bottom = new SharpDX.Mathematics.Interop.RawVector2(screen.X, screen.Y + markerSize);
+                                var left = new SharpDX.Mathematics.Interop.RawVector2(screen.X - markerSize, screen.Y);
+                                ctx.DrawLine(top, right, color, 1f);
+                                ctx.DrawLine(right, bottom, color, 1f);
+                                ctx.DrawLine(bottom, left, color, 1f);
+                                ctx.DrawLine(left, top, color, 1f);
+                                break;
+                            default:
+                                // Square (shut)
+                                var tl = new SharpDX.Mathematics.Interop.RawVector2(screen.X - markerSize, screen.Y - markerSize);
+                                var tr = new SharpDX.Mathematics.Interop.RawVector2(screen.X + markerSize, screen.Y - markerSize);
+                                var br = new SharpDX.Mathematics.Interop.RawVector2(screen.X + markerSize, screen.Y + markerSize);
+                                var bl = new SharpDX.Mathematics.Interop.RawVector2(screen.X - markerSize, screen.Y + markerSize);
+                                ctx.DrawLine(tl, tr, color, 1f);
+                                ctx.DrawLine(tr, br, color, 1f);
+                                ctx.DrawLine(br, bl, color, 1f);
+                                ctx.DrawLine(bl, tl, color, 1f);
+                                break;
+                        }
+
+                        // Only show key name for locked doors with known keys
+                        if (door.IsLocked && door.KeyName != null)
+                            ctx.DrawText(door.KeyName, screen.X + textOffset, screen.Y, _doorKeyColor, DxTextSize.Small);
+                        break;
+                    }
                 }
             }
         }

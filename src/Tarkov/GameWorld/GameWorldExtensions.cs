@@ -64,7 +64,6 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld
                 _loggedSearchingForGameWorld = false;
                 _lastInvalidGameWorldError = null;
                 _loggedGameWorldFound = false;
-
                 map = winner.Result.Map;
                 return winner.Result.GameWorld;
             }

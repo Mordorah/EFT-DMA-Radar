@@ -92,6 +92,14 @@
                             Command="{Binding ToggleLootListPanelCommand}"
                             Tag="{Binding LootListPanel.IsOpen, Mode=OneWay}"/>
 
+                    <!-- PLAYERS section -->
+                    <Rectangle Height="0.5" Margin="6,10,6,0" Fill="{DynamicResource Neon.TriGradientBrush}" Opacity="0.3"/>
+                    <TextBlock Text="PLAYERS" Style="{StaticResource SidebarGroupHeader}"/>
+                    <Button Content="&#x1F465; Players"
+                            Style="{StaticResource SidebarButton}"
+                            Command="{Binding TogglePlayersPanelCommand}"
+                            Tag="{Binding PlayersPanel.IsOpen, Mode=OneWay}"/>
+
                     <!-- HELPERS section -->
                     <Rectangle Height="0.5" Margin="6,10,6,0" Fill="{DynamicResource Neon.TriGradientBrush}" Opacity="0.3"/>
                     <TextBlock Text="HELPERS" Style="{StaticResource SidebarGroupHeader}"/>

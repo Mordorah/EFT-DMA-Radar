@@ -128,6 +128,11 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         /// </summary>
         public int PlayerId { get; private set; }
 
+        /// <summary>
+        /// Player's VOIP session ID (parsed from string). -1 if unavailable.
+        /// </summary>
+        public int VoipId { get; }
+
         #region Weapon Detection
 
         private string _cachedWeaponName;
@@ -336,11 +341,32 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
 
             // Try to get existing group from cache (for Auto Groups feature)
             PlayerId = GetPlayerId();
+            VoipId = ParseVoipId();
             GroupID = TryGetGroup(PlayerId);
             if (GroupID == -100)
             {
                 Type = PlayerType.Teammate;
             }
+
+            // Watchlist check — mark watched players
+            if (IsHuman && Type != PlayerType.Teammate)
+            {
+                try
+                {
+                    var acctPtr = Memory.ReadPtr(this + Offsets.ObservedPlayerView.AccountId);
+                    var accountId = acctPtr != 0 ? Memory.ReadUnicodeString(acctPtr) : null;
+                    if (!string.IsNullOrWhiteSpace(accountId) && App.Watchlist.TryGet(accountId, out var watchEntry))
+                    {
+                        Alerts = $"[WATCHLIST] {watchEntry.Reason}";
+                        Type = PlayerType.SpecialPlayer;
+                        DebugLogger.LogDebug($"[Watchlist] Matched player '{Name}' — {watchEntry.Reason}");
+                    }
+                }
+                catch { /* Non-critical */ }
+            }
+
+            // Player history — log this encounter
+            App.PlayerHistory.AddOrUpdate(this);
         }
 
         /// <summary>
@@ -427,6 +453,28 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
             catch
             {
                 return 0;
+            }
+        }
+
+        /// <summary>
+        /// Reads and parses the VOIP ID string from memory.
+        /// </summary>
+        /// <returns>VOIP ID as int, or -1 if unavailable.</returns>
+        private int ParseVoipId()
+        {
+            try
+            {
+                var strPtr = Memory.ReadPtr(this + Offsets.ObservedPlayerView.VoipId);
+                if (strPtr == 0)
+                    return -1;
+                var s = Memory.ReadUnicodeString(strPtr);
+                if (string.IsNullOrWhiteSpace(s))
+                    return -1;
+                return int.TryParse(s, out int id) ? id : -1;
+            }
+            catch
+            {
+                return -1;
             }
         }
 

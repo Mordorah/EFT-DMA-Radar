@@ -132,5 +132,57 @@ namespace LoneEftDmaRadar.Tarkov.Unity.Structures
             }
             return 0x0;
         }
+
+        /// <summary>
+        /// Find a behaviour/component by its class name across all active GameObjects.
+        /// Returns the ObjectClass address of the matching component.
+        /// </summary>
+        public ulong FindBehaviourByClassName(string className)
+        {
+            var current = Memory.ReadValue<LinkedListObject>(ActiveNodes);
+            var last = Memory.ReadValue<LinkedListObject>(LastActiveNode);
+
+            for (int i = 0; i < 100_000; i++)
+            {
+                if (!MemDMA.IsValidVirtualAddress(current.ThisObject))
+                    break;
+
+                var comp = GetComponentOnGameObject(current.ThisObject, className);
+                if (MemDMA.IsValidVirtualAddress(comp))
+                    return comp;
+
+                if (current.ThisObject == last.ThisObject)
+                    break;
+
+                current = Memory.ReadValue<LinkedListObject>(current.NextObjectLink);
+            }
+            return 0;
+        }
+
+        /// <summary>
+        /// Find a component by class name on a specific native GameObject.
+        /// Returns the ObjectClass address (IL2CPP managed object).
+        /// </summary>
+        private static ulong GetComponentOnGameObject(ulong gameObjectPtr, string className)
+        {
+            var componentsBase = gameObjectPtr + UnitySDK.UnityOffsets.GameObject_ComponentsOffset;
+            var arrayBase = Memory.ReadValue<ulong>(componentsBase);
+            var count = Memory.ReadValue<int>(componentsBase + 0x10);
+
+            if (!MemDMA.IsValidVirtualAddress(arrayBase) || count <= 0 || count > 256)
+                return 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                var componentObjectClass = Memory.ReadValue<ulong>(arrayBase + (ulong)(i * 0x10) + 0x8);
+                if (!MemDMA.IsValidVirtualAddress(componentObjectClass))
+                    continue;
+
+                var name = ObjectClass.ReadName(componentObjectClass, 128, false);
+                if (name != null && name.Equals(className, StringComparison.OrdinalIgnoreCase))
+                    return componentObjectClass;
+            }
+            return 0;
+        }
     }
 }

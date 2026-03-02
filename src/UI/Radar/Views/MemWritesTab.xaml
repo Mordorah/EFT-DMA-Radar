@@ -214,6 +214,137 @@
                     </StackPanel>
                 </GroupBox>
 
+                <!-- Anti-AFK card -->
+                <GroupBox Header="Anti-AFK" Margin="0,0,0,8">
+                    <StackPanel IsEnabled="{Binding Enabled}">
+                        <CheckBox Content="Enable Anti-AFK"
+                                  IsChecked="{Binding AntiAfkEnabled, Mode=TwoWay}"
+                                  FontWeight="SemiBold"
+                                  Margin="0,0,0,8" />
+
+                        <TextBlock Text="Prevents AFK timeout by setting a 7-day inactivity delay. Applied once per raid."
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource App.TextMutedBrush}"
+                                   FontSize="12" />
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Fast Weapon Ops card -->
+                <GroupBox Header="Fast Weapon Ops" Margin="0,0,8,8">
+                    <StackPanel IsEnabled="{Binding Enabled}">
+                        <CheckBox Content="Enable Fast Weapon Ops"
+                                  IsChecked="{Binding FastWeaponOpsEnabled, Mode=TwoWay}"
+                                  FontWeight="SemiBold"
+                                  Margin="0,0,0,8" />
+
+                        <TextBlock Text="Speeds up reload, chamber, and other weapon animations (4x). Also increases aiming speed."
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource App.TextMutedBrush}"
+                                   FontSize="12"
+                                   Margin="0,0,0,8" />
+
+                        <Border Background="#0C1A1618"
+                                BorderBrush="{StaticResource WarningBrush}"
+                                BorderThickness="0.5"
+                                CornerRadius="6"
+                                Padding="10"
+                                Margin="0,4,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Detection risk: high"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource WarningBrush}" />
+                                <TextBlock Text="Abnormal animation speeds are easily flagged."
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource App.TextMutedBrush}"
+                                           FontSize="12"
+                                           Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Mag Drills card -->
+                <GroupBox Header="Mag Drills" Margin="0,0,0,8">
+                    <StackPanel IsEnabled="{Binding Enabled}">
+                        <CheckBox Content="Enable Fast Mag Drills"
+                                  IsChecked="{Binding MagDrillsEnabled, Mode=TwoWay}"
+                                  FontWeight="SemiBold"
+                                  Margin="0,0,0,8" />
+
+                        <TextBlock Text="Increases magazine load and unload speed via the SkillManager."
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource App.TextMutedBrush}"
+                                   FontSize="12" />
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Disable Head Bobbing card -->
+                <GroupBox Header="Disable Head Bobbing" Margin="0,0,8,8">
+                    <StackPanel IsEnabled="{Binding Enabled}">
+                        <CheckBox Content="Disable Head Bobbing"
+                                  IsChecked="{Binding DisableHeadBobbingEnabled, Mode=TwoWay}"
+                                  FontWeight="SemiBold"
+                                  Margin="0,0,0,8" />
+
+                        <TextBlock Text="Removes camera head bob effect by writing to the game settings. Purely visual QoL."
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource App.TextMutedBrush}"
+                                   FontSize="12" />
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Disable Inventory Blur card -->
+                <GroupBox Header="Disable Inventory Blur" Margin="0,0,0,8">
+                    <StackPanel IsEnabled="{Binding Enabled}">
+                        <CheckBox Content="Disable Inventory Blur"
+                                  IsChecked="{Binding DisableInventoryBlurEnabled, Mode=TwoWay}"
+                                  FontWeight="SemiBold"
+                                  Margin="0,0,0,8" />
+
+                        <TextBlock Text="Removes the blur effect when opening inventory for a clearer view."
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource App.TextMutedBrush}"
+                                   FontSize="12" />
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Time of Day card -->
+                <GroupBox Header="Time of Day" Margin="0,0,8,8">
+                    <StackPanel IsEnabled="{Binding Enabled}">
+                        <CheckBox Content="Lock Time of Day"
+                                  IsChecked="{Binding TimeOfDayEnabled, Mode=TwoWay}"
+                                  FontWeight="SemiBold"
+                                  Margin="0,0,0,8" />
+
+                        <TextBlock Text="Locks the in-game time to the selected hour. Disabled on Factory and Labs."
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource App.TextMutedBrush}"
+                                   FontSize="12"
+                                   Margin="0,0,0,8" />
+
+                        <StackPanel Margin="0,4,0,0" IsEnabled="{Binding TimeOfDayEnabled}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Hour" />
+                                <TextBlock Text="{Binding TimeOfDayHour, StringFormat='{}{0:F0}:00'}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource AccentBrush}"
+                                           Grid.Column="1"
+                                           HorizontalAlignment="Right" />
+                            </Grid>
+                            <Slider Value="{Binding TimeOfDayHour, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="24"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="0,6,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </GroupBox>
+
             </UniformGrid>
 
         </StackPanel>

@@ -194,6 +194,9 @@
                         <CheckBox Content="Show Loot" IsChecked="{Binding EspLoot, Mode=TwoWay}" Margin="0,0,16,8" />
                         <CheckBox Content="Show Prices" IsChecked="{Binding EspLootPrice, Mode=TwoWay}" Margin="0,0,16,8" IsEnabled="{Binding EspLoot}" />
                         <CheckBox Content="Show Exfils" IsChecked="{Binding EspExfils, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Doors" IsChecked="{Binding EspDoors, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Switches" IsChecked="{Binding EspSwitches, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Card Readers" IsChecked="{Binding EspCardReaders, Mode=TwoWay}" Margin="0,0,16,8" />
                         <CheckBox Content="Show Tripwires" IsChecked="{Binding EspTripwires, Mode=TwoWay}" Margin="0,0,16,8" />
                         <CheckBox Content="Show Grenades" IsChecked="{Binding EspGrenades, Mode=TwoWay}" Margin="0,0,16,8" />
                         <CheckBox Content="Loot Cone Filter"

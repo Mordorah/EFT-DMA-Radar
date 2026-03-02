@@ -409,6 +409,45 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             }
         }
 
+        public bool EspDoors
+        {
+            get => App.Config.UI.EspDoors;
+            set
+            {
+                if (App.Config.UI.EspDoors != value)
+                {
+                    App.Config.UI.EspDoors = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool EspSwitches
+        {
+            get => App.Config.UI.EspSwitches;
+            set
+            {
+                if (App.Config.UI.EspSwitches != value)
+                {
+                    App.Config.UI.EspSwitches = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool EspCardReaders
+        {
+            get => App.Config.UI.EspCardReaders;
+            set
+            {
+                if (App.Config.UI.EspCardReaders != value)
+                {
+                    App.Config.UI.EspCardReaders = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public bool EspTripwires
         {
             get => App.Config.UI.EspTripwires;

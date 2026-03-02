@@ -35,6 +35,7 @@ using System.Windows;
 using System.Windows.Input;
 using LoneEftDmaRadar.Tarkov;
 using LoneEftDmaRadar.Tarkov.GameWorld.Loot;
+using LoneEftDmaRadar.Misc;
 using LoneEftDmaRadar.UI.ColorPicker;
 using LoneEftDmaRadar.UI.Misc;
 using LoneEftDmaRadar.UI.Radar.Views;
@@ -57,8 +58,151 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             BackupConfigCommand = new SimpleCommand(OnBackupConfig);
             OpenConfigCommand = new SimpleCommand(OnOpenConfig);
             RefreshDataCommand = new SimpleCommand(OnRefreshData);
+            LoadProfileCommand = new SimpleCommand(OnLoadProfile);
+            SaveProfileCommand = new SimpleCommand(OnSaveProfile);
+            SaveAsProfileCommand = new SimpleCommand(OnSaveAsProfile);
+            DeleteProfileCommand = new SimpleCommand(OnDeleteProfile);
             SetScaleValues(UIScale);
+            RefreshProfileList();
         }
+
+        #region Config Profiles
+
+        private List<string> _profileList = new();
+        public List<string> ProfileList
+        {
+            get => _profileList;
+            set
+            {
+                _profileList = value;
+                OnPropertyChanged(nameof(ProfileList));
+            }
+        }
+
+        private string _selectedProfile;
+        public string SelectedProfile
+        {
+            get => _selectedProfile;
+            set
+            {
+                if (_selectedProfile != value)
+                {
+                    _selectedProfile = value;
+                    OnPropertyChanged(nameof(SelectedProfile));
+                }
+            }
+        }
+
+        public string ActiveProfileLabel =>
+            string.IsNullOrEmpty(ConfigProfileManager.ActiveProfile)
+                ? "Active: (default)"
+                : $"Active: {ConfigProfileManager.ActiveProfile}";
+
+        public ICommand LoadProfileCommand { get; }
+        public ICommand SaveProfileCommand { get; }
+        public ICommand SaveAsProfileCommand { get; }
+        public ICommand DeleteProfileCommand { get; }
+
+        private void RefreshProfileList()
+        {
+            ProfileList = ConfigProfileManager.GetAvailableProfiles();
+            if (ProfileList.Count > 0 && SelectedProfile is null)
+                SelectedProfile = ProfileList.FirstOrDefault();
+            OnPropertyChanged(nameof(ActiveProfileLabel));
+        }
+
+        private void OnLoadProfile()
+        {
+            if (string.IsNullOrEmpty(SelectedProfile))
+                return;
+            try
+            {
+                ConfigProfileManager.LoadProfile(SelectedProfile);
+                OnPropertyChanged(nameof(ActiveProfileLabel));
+                MessageBox.Show(MainWindow.Instance, $"Profile '{SelectedProfile}' loaded.", "Config Profiles");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(MainWindow.Instance, $"Error: {ex.Message}", "Config Profiles", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void OnSaveProfile()
+        {
+            if (string.IsNullOrEmpty(SelectedProfile))
+            {
+                OnSaveAsProfile();
+                return;
+            }
+            try
+            {
+                ConfigProfileManager.SaveProfile(SelectedProfile);
+                OnPropertyChanged(nameof(ActiveProfileLabel));
+                MessageBox.Show(MainWindow.Instance, $"Profile '{SelectedProfile}' saved.", "Config Profiles");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(MainWindow.Instance, $"Error: {ex.Message}", "Config Profiles", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void OnSaveAsProfile()
+        {
+            // Simple input dialog using WPF Window
+            var dlg = new Window
+            {
+                Title = "Save As New Profile",
+                Width = 300,
+                Height = 130,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = MainWindow.Instance,
+                ResizeMode = ResizeMode.NoResize
+            };
+            var sp = new System.Windows.Controls.StackPanel { Margin = new Thickness(10) };
+            var tb = new System.Windows.Controls.TextBox { Margin = new Thickness(0, 0, 0, 8) };
+            var btn = new System.Windows.Controls.Button
+            {
+                Content = "Save",
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+                Padding = new Thickness(16, 4, 16, 4)
+            };
+            btn.Click += (s, e) => { dlg.DialogResult = true; dlg.Close(); };
+            sp.Children.Add(new System.Windows.Controls.TextBlock { Text = "Enter profile name:" });
+            sp.Children.Add(tb);
+            sp.Children.Add(btn);
+            dlg.Content = sp;
+
+            if (dlg.ShowDialog() != true || string.IsNullOrWhiteSpace(tb.Text))
+                return;
+
+            string name = tb.Text.Trim();
+            try
+            {
+                ConfigProfileManager.SaveProfile(name);
+                RefreshProfileList();
+                SelectedProfile = name;
+                OnPropertyChanged(nameof(ActiveProfileLabel));
+                MessageBox.Show(MainWindow.Instance, $"Profile '{name}' saved.", "Config Profiles");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(MainWindow.Instance, $"Error: {ex.Message}", "Config Profiles", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void OnDeleteProfile()
+        {
+            if (string.IsNullOrEmpty(SelectedProfile))
+                return;
+            if (MessageBox.Show(MainWindow.Instance, $"Delete profile '{SelectedProfile}'?", "Config Profiles",
+                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+            ConfigProfileManager.DeleteProfile(SelectedProfile);
+            RefreshProfileList();
+            OnPropertyChanged(nameof(ActiveProfileLabel));
+        }
+
+        #endregion
 
         #region General Settings
 
@@ -367,7 +511,72 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
                 }
             }
         }
-        
+
+        public bool ShowDoors
+        {
+            get => App.Config.Misc.ShowDoors;
+            set
+            {
+                if (App.Config.Misc.ShowDoors != value)
+                {
+                    App.Config.Misc.ShowDoors = value;
+                    OnPropertyChanged(nameof(ShowDoors));
+                }
+            }
+        }
+
+        public bool ShowLockedDoors
+        {
+            get => App.Config.Misc.ShowLockedDoors;
+            set
+            {
+                if (App.Config.Misc.ShowLockedDoors != value)
+                {
+                    App.Config.Misc.ShowLockedDoors = value;
+                    OnPropertyChanged(nameof(ShowLockedDoors));
+                }
+            }
+        }
+
+        public bool ShowUnlockedDoors
+        {
+            get => App.Config.Misc.ShowUnlockedDoors;
+            set
+            {
+                if (App.Config.Misc.ShowUnlockedDoors != value)
+                {
+                    App.Config.Misc.ShowUnlockedDoors = value;
+                    OnPropertyChanged(nameof(ShowUnlockedDoors));
+                }
+            }
+        }
+
+        public bool ShowSwitches
+        {
+            get => App.Config.Misc.ShowSwitches;
+            set
+            {
+                if (App.Config.Misc.ShowSwitches != value)
+                {
+                    App.Config.Misc.ShowSwitches = value;
+                    OnPropertyChanged(nameof(ShowSwitches));
+                }
+            }
+        }
+
+        public bool ShowCardReaders
+        {
+            get => App.Config.Misc.ShowCardReaders;
+            set
+            {
+                if (App.Config.Misc.ShowCardReaders != value)
+                {
+                    App.Config.Misc.ShowCardReaders = value;
+                    OnPropertyChanged(nameof(ShowCardReaders));
+                }
+            }
+        }
+
         public bool ShowESP
         {
             get => UI.ESP.ESPWindow.ShowESP;

@@ -27,6 +27,7 @@ SOFTWARE.
 */
 
 using Collections.Pooled;
+using LoneEftDmaRadar.DMA;
 using LoneEftDmaRadar.Tarkov.Unity.Collections;
 using LoneEftDmaRadar.UI.Misc;
 
@@ -52,6 +53,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Explosives
         {
             GetGrenades(ct);
             GetTripwires(ct);
+            GetMortarProjectiles();
             var explosives = _explosives.Values;
             if (explosives.Count == 0)
             {
@@ -139,6 +141,42 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Explosives
             catch (Exception ex)
             {
                 DebugLogger.LogDebug($"Sync Objects Error: {ex}");
+            }
+        }
+
+        private void GetMortarProjectiles()
+        {
+            try
+            {
+                var shellingController = Memory.ReadValue<ulong>(_localGameWorld + Offsets.GameWorld.ClientShellingController);
+                if (shellingController == 0)
+                    return;
+                var activeProjectilesPtr = Memory.ReadValue<ulong>(shellingController + Offsets.ClientShellingController.ActiveClientProjectiles);
+                if (activeProjectilesPtr == 0)
+                    return;
+                using var activeProjectiles = UnityDictionary<int, ulong>.Create(activeProjectilesPtr);
+                foreach (var entry in activeProjectiles)
+                {
+                    if (entry.Value == 0)
+                        continue;
+                    try
+                    {
+                        _ = _explosives.GetOrAdd(
+                            entry.Value,
+                            addr => new MortarProjectile(addr, _explosives));
+                    }
+                    catch (Exception ex)
+                    {
+                        DebugLogger.LogDebug($"Error Processing Mortar Projectile @ 0x{entry.Value:X}: {ex}");
+                        _ = _explosives.TryRemove(entry.Value, out _);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Shelling controller may not exist on all maps — silently ignore
+                if (!ex.Message.Contains("count"))
+                    DebugLogger.LogDebug($"Mortar Projectiles Error: {ex}");
             }
         }
 

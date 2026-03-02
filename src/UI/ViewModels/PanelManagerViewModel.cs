@@ -75,6 +75,7 @@ namespace LoneEftDmaRadar.UI.ViewModels
         public PanelState WebRadarPanel { get; } = new() { X = 460, Y = 110, Width = 450, Height = 350 };
         public PanelState DebugPanel { get; } = new() { X = 480, Y = 130, Width = 400, Height = 300 };
         public PanelState VisibilityPanel { get; } = new() { X = 500, Y = 150, Width = 400, Height = 450 };
+        public PanelState PlayersPanel { get; } = new() { X = 520, Y = 170, Width = 450, Height = 500 };
 
         #endregion
 
@@ -113,6 +114,7 @@ namespace LoneEftDmaRadar.UI.ViewModels
         public ICommand ToggleWebRadarPanelCommand { get; }
         public ICommand ToggleDebugPanelCommand { get; }
         public ICommand ToggleVisibilityPanelCommand { get; }
+        public ICommand TogglePlayersPanelCommand { get; }
         public ICommand ResetAllPanelsCommand { get; }
 
         #endregion
@@ -134,7 +136,8 @@ namespace LoneEftDmaRadar.UI.ViewModels
                 ["MemWritesPanel"] = MemWritesPanel,
                 ["WebRadarPanel"] = WebRadarPanel,
                 ["DebugPanel"] = DebugPanel,
-                ["VisibilityPanel"] = VisibilityPanel
+                ["VisibilityPanel"] = VisibilityPanel,
+                ["PlayersPanel"] = PlayersPanel
             };
 
             // Initialize toggle commands
@@ -151,6 +154,7 @@ namespace LoneEftDmaRadar.UI.ViewModels
             ToggleWebRadarPanelCommand = new RelayCommand(() => TogglePanel(WebRadarPanel));
             ToggleDebugPanelCommand = new RelayCommand(() => TogglePanel(DebugPanel));
             ToggleVisibilityPanelCommand = new RelayCommand(() => TogglePanel(VisibilityPanel));
+            TogglePlayersPanelCommand = new RelayCommand(() => TogglePanel(PlayersPanel));
             ResetAllPanelsCommand = new RelayCommand(ResetAllPanels);
 
             // Load saved panel states from config
@@ -221,6 +225,7 @@ namespace LoneEftDmaRadar.UI.ViewModels
             ResetPanel(WebRadarPanel, 460, 110, 450, 350);
             ResetPanel(DebugPanel, 480, 130, 400, 300);
             ResetPanel(VisibilityPanel, 500, 150, 400, 450);
+            ResetPanel(PlayersPanel, 520, 170, 450, 500);
         }
 
         private void ResetPanel(PanelState panel, double x, double y, double width, double height)

@@ -99,16 +99,16 @@ namespace LoneEftDmaRadar
                     case "WebRadarPanel": pm.WebRadarPanel.IsOpen = false; break;
                     case "DebugPanel": pm.DebugPanel.IsOpen = false; break;
                     case "VisibilityPanel": pm.VisibilityPanel.IsOpen = false; break;
+                    case "PlayersPanel": pm.PlayersPanel.IsOpen = false; break;
                 }
             }
         }
 
         protected override void OnClosed(EventArgs e)
         {
-            VisibilityManager.Stop();
-            ESPManager.CloseESP();
-            DebugLogger.Close();
             base.OnClosed(e);
+            // Force exit to ensure no background threads keep the process alive
+            Environment.Exit(0);
         }
 
         /// <summary>
@@ -161,6 +161,9 @@ namespace LoneEftDmaRadar
                 ViewModel?.PanelManager?.SaveToConfig();
 
                 Memory.Dispose(); // Close FPGA
+                VisibilityManager.Stop();
+                ESPManager.CloseESP();
+                DebugLogger.Close();
             }
             finally
             {

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using LoneEftDmaRadar.UI.Misc;
 
@@ -302,11 +303,28 @@ namespace LoneEftDmaRadar.LOS
             // Indices
             WriteIntArray(w, mesh.Indices, mesh.TriangleCount * 3);
 
-            // BVH nodes
+            // BVH nodes — write in chunks to avoid Span<byte> overflow for large meshes
             if (nodes != null && nodes.Length > 0)
             {
-                var nodeBytes = MemoryMarshal.AsBytes(nodes.AsSpan());
-                w.Write(nodeBytes);
+                int nodeSize = Unsafe.SizeOf<BvhNode>();
+                long totalBytes = (long)nodes.Length * nodeSize;
+
+                if (totalBytes <= int.MaxValue)
+                {
+                    w.Write(MemoryMarshal.AsBytes(nodes.AsSpan()));
+                }
+                else
+                {
+                    int chunkNodes = int.MaxValue / nodeSize;
+                    int offset = 0;
+                    while (offset < nodes.Length)
+                    {
+                        int count = Math.Min(chunkNodes, nodes.Length - offset);
+                        var chunk = nodes.AsSpan(offset, count);
+                        w.Write(MemoryMarshal.AsBytes(chunk));
+                        offset += count;
+                    }
+                }
             }
 
             // Triangle order
@@ -347,12 +365,32 @@ namespace LoneEftDmaRadar.LOS
             // Indices
             var indices = ReadIntArray(r, triangleCount * 3);
 
-            // BVH nodes
+            // BVH nodes — read in chunks to avoid Span<byte> overflow for large meshes
+            // (nodeCount * 32 can exceed int.MaxValue for maps like Woods)
             BvhNode[] nodes = null;
             if (nodeCount > 0)
             {
                 nodes = new BvhNode[nodeCount];
-                r.BaseStream.ReadExactly(MemoryMarshal.AsBytes(nodes.AsSpan()));
+                int nodeSize = Unsafe.SizeOf<BvhNode>();
+                long totalBytes = (long)nodeCount * nodeSize;
+
+                if (totalBytes <= int.MaxValue)
+                {
+                    r.BaseStream.ReadExactly(MemoryMarshal.AsBytes(nodes.AsSpan()));
+                }
+                else
+                {
+                    // Chunked read for >2GB data
+                    int chunkNodes = int.MaxValue / nodeSize; // max nodes per chunk
+                    int offset = 0;
+                    while (offset < nodeCount)
+                    {
+                        int count = Math.Min(chunkNodes, nodeCount - offset);
+                        var chunk = nodes.AsSpan(offset, count);
+                        r.BaseStream.ReadExactly(MemoryMarshal.AsBytes(chunk));
+                        offset += count;
+                    }
+                }
             }
 
             // Triangle order

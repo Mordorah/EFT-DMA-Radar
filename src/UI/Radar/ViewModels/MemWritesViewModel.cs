@@ -129,5 +129,81 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
                 OnPropertyChanged();
             }
         }
+
+        // Anti-AFK
+        public bool AntiAfkEnabled
+        {
+            get => App.Config.MemWrites.AntiAfkEnabled;
+            set
+            {
+                App.Config.MemWrites.AntiAfkEnabled = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // Fast Weapon Ops
+        public bool FastWeaponOpsEnabled
+        {
+            get => App.Config.MemWrites.FastWeaponOpsEnabled;
+            set
+            {
+                App.Config.MemWrites.FastWeaponOpsEnabled = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // Mag Drills
+        public bool MagDrillsEnabled
+        {
+            get => App.Config.MemWrites.MagDrillsEnabled;
+            set
+            {
+                App.Config.MemWrites.MagDrillsEnabled = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // Disable Head Bobbing
+        public bool DisableHeadBobbingEnabled
+        {
+            get => App.Config.MemWrites.DisableHeadBobbingEnabled;
+            set
+            {
+                App.Config.MemWrites.DisableHeadBobbingEnabled = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // Disable Inventory Blur
+        public bool DisableInventoryBlurEnabled
+        {
+            get => App.Config.MemWrites.DisableInventoryBlurEnabled;
+            set
+            {
+                App.Config.MemWrites.DisableInventoryBlurEnabled = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // Time of Day
+        public bool TimeOfDayEnabled
+        {
+            get => App.Config.MemWrites.TimeOfDayEnabled;
+            set
+            {
+                App.Config.MemWrites.TimeOfDayEnabled = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public float TimeOfDayHour
+        {
+            get => App.Config.MemWrites.TimeOfDayHour;
+            set
+            {
+                App.Config.MemWrites.TimeOfDayHour = value;
+                OnPropertyChanged();
+            }
+        }
     }
 }

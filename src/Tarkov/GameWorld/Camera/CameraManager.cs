@@ -351,17 +351,25 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
             }
         }
 
+        /// <summary>
+        /// Current scope sensitivity multiplier (1.0 = no change, &lt;1.0 = slower camera movement when scoped).
+        /// Updated each frame when ADS. Used by aimbot for compensation.
+        /// </summary>
+        public static float ScopeSensitivity { get; private set; } = 1.0f;
+
         private bool CheckIfScoped(LocalPlayer localPlayer)
         {
             try
             {
                 if (localPlayer is null)
                 {
+                    ScopeSensitivity = 1.0f;
                     return false;
                 }
 
                 if (!OpticCameraActive)
                 {
+                    ScopeSensitivity = 1.0f;
                     return false;
                 }
 
@@ -374,22 +382,32 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                     var pSightComponent = Memory.ReadPtr(optics[0] + Offsets.SightNBone.Mod);
                     var sightComponent = Memory.ReadValue<SightComponent>(pSightComponent);
 
+                    // Read per-sight sensitivity multiplier for aimbot compensation
+                    float sensitivity = sightComponent.GetSensitivity();
+                    if (sensitivity > 0f && sensitivity < 10f)
+                        ScopeSensitivity = sensitivity;
+                    else
+                        ScopeSensitivity = 1.0f;
+
                     if (sightComponent.ScopeZoomValue != 0f)
                     {
-                        bool result = sightComponent.ScopeZoomValue > 1f;
+                        // Use > 1.05f threshold to avoid float imprecision for 1x sights
+                        bool result = sightComponent.ScopeZoomValue > 1.05f;
                         return result;
                     }
 
                     float zoomLevel = sightComponent.GetZoomLevel();
-                    bool zoomResult = zoomLevel > 1f;
+                    // Use > 1.05f threshold to avoid float imprecision for 1x sights
+                    bool zoomResult = zoomLevel > 1.05f;
                     return zoomResult;
                 }
 
+                ScopeSensitivity = 1.0f;
                 return false;
             }
-            catch (Exception ex)
+            catch
             {
-                DebugLogger.LogDebug($"CheckIfScoped() ERROR: {ex}");
+                ScopeSensitivity = 1.0f;
                 return false;
             }
         }
@@ -577,15 +595,51 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                 }
             }
 
+            /// <summary>
+            /// Gets the current aim sensitivity multiplier for this sight at its current scope and mode.
+            /// Returns the per-optic sensitivity value from ISightComponentTemplate.AimSensitivity.
+            /// </summary>
+            public readonly float GetSensitivity()
+            {
+                try
+                {
+                    var si = SightInterface;
+                    using var sensitivityArray = si.AimSensitivity;
+                    if (sensitivityArray.Count == 0)
+                        return 1.0f;
+
+                    if (SelectedScope >= sensitivityArray.Count || SelectedScope is < 0 or > 10)
+                        return 1.0f;
+
+                    using var selectedScopeModes = UnityArray<int>.Create(pScopeSelectedModes, false);
+                    int selectedScopeMode = SelectedScope >= selectedScopeModes.Count ? 0 : selectedScopeModes[SelectedScope];
+                    ulong sensitivityAddr = sensitivityArray[SelectedScope] + UnityArray<float>.ArrBaseOffset + (uint)selectedScopeMode * 0x4;
+
+                    float sensitivity = Memory.ReadValue<float>(sensitivityAddr, false);
+                    if (sensitivity.IsNormalOrZero() && sensitivity is > 0f and < 10f)
+                        return sensitivity;
+
+                    return 1.0f;
+                }
+                catch
+                {
+                    return 1.0f;
+                }
+            }
+
             public readonly SightInterface SightInterface => Memory.ReadValue<SightInterface>(pSightInterface);
         }
 
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
         private readonly struct SightInterface
         {
+            [FieldOffset((int)Offsets.SightInterface.AimSensitivity)]
+            private readonly ulong pAimSensitivity;
+
             [FieldOffset((int)Offsets.SightInterface.Zooms)]
             private readonly ulong pZooms;
 
+            public readonly UnityArray<ulong> AimSensitivity => UnityArray<ulong>.Create(pAimSensitivity, true);
             public readonly UnityArray<ulong> Zooms => UnityArray<ulong>.Create(pZooms, true);
         }
 

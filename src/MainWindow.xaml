@@ -183,6 +183,19 @@
                 <tabs:VisibilityTab/>
             </controls:DraggablePanel>
 
+            <!-- Players Panel -->
+            <controls:DraggablePanel
+                x:Name="PlayersPanel"
+                Title="👥 Players"
+                Visibility="{Binding PanelManager.PlayersPanel.IsOpen, Converter={StaticResource BoolToVis}}"
+                Canvas.Left="{Binding PanelManager.PlayersPanel.X, Mode=TwoWay}"
+                Canvas.Top="{Binding PanelManager.PlayersPanel.Y, Mode=TwoWay}"
+                Width="{Binding PanelManager.PlayersPanel.Width, Mode=TwoWay}"
+                Height="{Binding PanelManager.PlayersPanel.Height, Mode=TwoWay}"
+                CloseRequested="Panel_CloseRequested">
+                <tabs:PlayersTab/>
+            </controls:DraggablePanel>
+
             <!-- Debug Panel -->
             <controls:DraggablePanel
                 x:Name="DebugPanel"

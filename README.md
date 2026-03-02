@@ -1,43 +1,67 @@
 # Twilight PVE Radar
 
-A feature-rich DMA-based radar for Escape from Tarkov, forked from [Lone EFT DMA Radar](https://github.com/lone-dma/Lone-EFT-DMA-Radar) with additional enhancements.
+DMA-based radar for Escape from Tarkov, forked from [Lone EFT DMA Radar](https://github.com/lone-dma/Lone-EFT-DMA-Radar) with additional enhancements for PVE.
 
 **Note:** This project is primarily developed and tested for **PVE mode**. Most features should work in PVP as well, but PVP compatibility is not actively tested.
 
-## Features
+## Notable Features
+
+### External Visibility Checks
+- Mesh based, raycasting visibility check
+- BVH-accelerated raycasting on a dedicated T5 worker thread (~8ms per frame, up to 64 enemies x 18 bones)
+- Three-tier mesh loading: `.bvhcache` (instant) → `.tmesh` (binary) → `.obj` (text fallback)
+- memory-mapped I/O, for easy Adaptation
+- Caches mesh files for <5s un-/loading times
+- <5ms total delay across vischeck workflow
+- tracking for up-to 64 Targets
+ Dual-mode raycasting: eye LOS (includes foliage) and ballistic LOS (no foliage)
+- per bone visibility checks
+
+### Hardware Aimbot [WIP]
+- KMBox/Makcu Integration
+- Smart weapon-ergo compensation
+- Full balistics calculation (ammo type, muzzle Velocity, etc.)
+- Bullet drop calculation and prediction
+- Horizontal movement lead prediction [WIP]
+- Basic and per-bone hitscan w/ bone-priority [WIP]
+- adjustable dma & input delay
+
 
 ### Radar & Tracking
-- Real-time player tracking with team/group detection
 - PMC, Scav, Boss, and Raider identification
-- Player gear value estimation
-- Corpse and death marker tracking
+- Alive Enemy equipment value estimation
+- Corpse and death marker tracking w/ content scanning
 - Exfil point display with status indicators
-- Quest location markers and objective tracking
+- Quest location markers, zone-highlights, item and objective tracking
+- Quest route planner
 - Hazard zone visualization (minefields, sniper zones)
+- Grenade Tracing, Impact zones and tripwires
+- Kill feed w/ color-coded entries [WIP]
+- Door, switch and card reader tracking w/ state markers [WIP]
+- Player watchlist w/ persistent tags [WIP]
 
 ### Loot System
-- Loose loot scanning with price filtering
-- Container contents scanning (PVE/Offline)
+- Loose loot scanning with live PVE-flee price filtering
+- Container contents scanning (offline-raids only)
 - Custom loot filters with color coding
-- Quest item highlighting
+- Quest item highlighting / tracking
 - Hideout upgrade item tracking
-- Corpse loot inspection
+- Corpse loot scanning w/ loot filter Integration
+
 
 ### Widgets & UI
 - Aimview widget with configurable FOV
-- Player info widget (health, gear, distance)
-- Freelook mode with smooth panning
-- Multi-map support with auto-detection
-- Configurable draw distances and entity visibility
+- Ammo coutner widget
+- Mini-Radar for Fuser Overlay
 - Modular floating panel UI with drag, resize, and collapse
 - Auto-collapsing sidebar navigation
-- SkiaSharp-powered radar rendering
+- Multi Profile Config system
 
 ### ESP & Overlay
-- DX9 Fuser overlay with mini-radar
-- Box ESP, skeleton ESP, distance markers
-- Health bars and player names
-- Loot ESP with filtering
+- 2D Box, 2D Corner, 3D Corner & 3D Box ESP
+- Inventory Value, Equipment
+- Per-bone visibility coloring [WIP]
+- Door, switch and card reader ESP [WIP]
 
 ### Memory Features
 - Device aimbot (KMBox support)
@@ -46,21 +70,18 @@ A feature-rich DMA-based radar for Escape from Tarkov, forked from [Lone EFT DMA
 - Infinite stamina
 - Thermal/NVG toggle
 - Loot through walls
+- Fast weapon operations / mag drills
+- Anti-AFK
+- Time of day control
 
-*Memory write features are from the original Moulman fork and have not been tested by the current maintainer.*
+*Memory write features are from the Moulman & DER fork, have not been tested by me, but offsets are maintained .*
+
 
 ### Web Radar
-- Remote web-based radar access
-- Real-time data streaming
-- Mobile-friendly interface
+- Built-in web server w/ SignalR real-time sync
+- MessagePack serialization w/ LZ4 compression
+- UPnP port forwarding support
 
-### Local Mesh LOS (Line-of-Sight)
-- Per-bone visibility detection using exported collision meshes — no in-game plugin needed at runtime
-- Dual-mode raycasting: eye LOS (includes foliage) and ballistic LOS (no foliage)
-- BVH-accelerated raycasting on a dedicated T5 worker thread (~8ms per frame, up to 64 enemies x 18 bones)
-- Three-tier mesh loading: `.bvhcache` (instant) → `.tmesh` (binary) → `.obj` (text fallback)
-- Reactive scene management: unused meshes auto-unload on mode toggle to save RAM
-- Per-bone ESP coloring based on visibility results
 
 #### MapData Setup
 
@@ -88,7 +109,7 @@ File names don't matter — the radar picks up the first `.tmesh` (or `.obj`) it
 
 - Windows 11 (tested on 23H2/25H2)
 - DMA hardware (FPGA-based)
-- .NET 8.0 Runtime
+- .NET 9.0 Runtime
 - 1920x1080 resolution recommended
 
 ## Common Issues
@@ -115,12 +136,17 @@ Running both radar and fuser overlay simultaneously may impact performance on lo
 dotnet build -c Release
 ```
 
-Output will be in `bin/Release/net8.0-windows/`
+Output will be in `bin/Release/net9.0-windows/`
 
 ## Credits
 
-- [Lone DMA](https://github.com/lone-dma) - Original Lone EFT DMA Radar
-- [Moulman](https://github.com/Moulman) - ESP, aimbot, and memory-write features
+- [Lone DMA](https://github.com/lone-dma/Lone-EFT-DMA-Radar) - Original source project and upstream fork
+- [Moulman](https://github.com/moulmandev/EFT-DMA-Radar) - Fuser ESP, memory writes, KMBox/Makcu logic
+- Dreadful - PVE ideas, local container scanning
+- [DMA Educational Resources](https://github.com/dma-educational-resources/eft-dma-radar) - Memory writes, kill feed, web radar improvements, and more
+
+With special thanks to the entire DER team for maintaining it and the community work ([x0m](https://github.com/xx0m), [mamboooo](https://github.com/Mambo-Noob), [MasterKeef](https://github.com/chuckmorris420))
+ —
 
 ## Contributing
 

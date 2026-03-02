@@ -31,6 +31,7 @@ using LoneEftDmaRadar.Tarkov;
 using LoneEftDmaRadar.Tarkov.GameWorld.Exits;
 using LoneEftDmaRadar.Tarkov.GameWorld.Explosives;
 using LoneEftDmaRadar.Tarkov.GameWorld.Hazards;
+using LoneEftDmaRadar.Tarkov.GameWorld.Interactables;
 using LoneEftDmaRadar.Tarkov.GameWorld.Loot;
 using LoneEftDmaRadar.Tarkov.GameWorld.Player;
 using LoneEftDmaRadar.Tarkov.GameWorld.Quests;
@@ -193,6 +194,11 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
         private static IReadOnlyList<IWorldHazard> Hazards => Memory?.Hazards;
 
         /// <summary>
+        /// Contains all tracked doors/interactables in Local Game World.
+        /// </summary>
+        private static IReadOnlyList<Door> Doors => Memory?.Doors;
+
+        /// <summary>
         /// Item Search Filter has been set/applied.
         /// </summary>
         private static bool FilterIsSet =>
@@ -225,6 +231,8 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
                 var questLocs = (App.Config.QuestHelper.Enabled && App.Config.QuestHelper.ShowLocations && QuestLocations != null)
                     ? QuestLocations.Values.Cast<IMouseoverEntity>()
                     : Enumerable.Empty<IMouseoverEntity>();
+                var anyInteractableVisible = App.Config.Misc.ShowDoors || App.Config.Misc.ShowSwitches || App.Config.Misc.ShowCardReaders;
+                var doors = (anyInteractableVisible ? Doors : null) ?? Enumerable.Empty<IMouseoverEntity>();
 
                 if (FilterIsSet && !(MainWindow.Instance?.Radar?.Overlay?.ViewModel?.HideCorpses ?? false)) // Item Search
                 {
@@ -235,7 +243,7 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
 
                 // Return enumerable directly - removed .Any() which forced expensive enumeration
                 // The caller's foreach handles empty case gracefully (closest will be null)
-                return loot.Concat(containers).Concat(players).Concat(exits).Concat(hazards).Concat(questLocs);
+                return loot.Concat(containers).Concat(players).Concat(exits).Concat(hazards).Concat(questLocs).Concat(doors);
             }
         }
 
@@ -508,6 +516,14 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
                         }
                     }
 
+                    if (Doors is IReadOnlyList<Door> doors) // Draw interactables (doors, switches, card readers)
+                    {
+                        foreach (var door in doors)
+                        {
+                            door.Draw(canvas, mapParams, localPlayer);
+                        }
+                    }
+
                     // Draw quest location markers (if enabled)
                     if (App.Config.QuestHelper.Enabled && App.Config.QuestHelper.ShowLocations &&
                         QuestLocations is IReadOnlyDictionary<string, QuestLocation> questLocations)
@@ -575,6 +591,7 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
                     {
                         AimviewWidget?.Draw(canvas);
                     }
+                    KillFeedRenderer.Draw(canvas, info.Rect.Right); // Kill Feed Overlay
                 }
                 else // LocalPlayer is *not* in a Raid -> Display Reason
                 {
@@ -974,6 +991,11 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
 
                     case QuestLocation questLoc:
                         _mouseOverItem = questLoc;
+                        MouseoverGroup = null;
+                        break;
+
+                    case Door door:
+                        _mouseOverItem = door;
                         MouseoverGroup = null;
                         break;
 

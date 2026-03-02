@@ -9,13 +9,32 @@ namespace SDK
 		{
 			public const uint BtrController = 0x20; // EFT.Vehicle.BtrController
 			public const uint ExfiltrationController = 0x50; // EFT.Interactive.ExfiltrationController
+			public const uint ClientShellingController = 0xA0; // ArtilleryShellingControllerClient
 			public const uint LocationId = 0xC8; // string
 			public const uint LootList = 0x190; // System.Collections.Generic.List<IKillable>
 			public const uint RegisteredPlayers = 0x1B0; // System.Collections.Generic.List<IPlayer>
 			public const uint MainPlayer = 0x208; // EFT.Player
 			public const uint SynchronizableObjectLogicProcessor = 0x240; // EFT.SynchronizableObjects.SynchronizableObjectLogicProcessor
 			public const uint Grenades = 0x280; // DictionaryListHydra<int, Throwable>
+			public const uint World = 0x210; // EFT.World
 		}
+
+        public readonly partial struct World
+        {
+            public const uint Interactables = 0x30; // WorldInteractiveObject[] _interactableObjectsForNetSync
+        }
+
+        public readonly partial struct LocationScene
+        {
+            public const uint WorldInteractiveObjects = 0x30; // WorldInteractiveObject[]
+        }
+
+        public readonly partial struct Interactable
+        {
+            public const uint KeyId = 0x60; // string
+            public const uint Id = 0x70; // string
+            public const uint DoorState = 0xD0; // EDoorState (byte)
+        }
 
         public readonly partial struct ExfiltrationController
         {
@@ -72,6 +91,17 @@ namespace SDK
             public const uint _isDestroyed  = 0x4D; // Boolean
         }
 
+        public readonly partial struct ClientShellingController
+        {
+            public const uint ActiveClientProjectiles = 0x68; // Dictionary<int, ArtilleryProjectileClient>
+        }
+
+        public readonly partial struct ArtilleryProjectileClient
+        {
+            public const uint Position = 0x30; // UnityEngine.Vector3 (_targetPosition)
+            public const uint IsActive = 0x3C; // Boolean (_flyOn)
+        }
+
         public readonly partial struct Player
         {
             public const uint MovementContext = 0x60; // EFT.MovementContext
@@ -87,6 +117,7 @@ namespace SDK
             public const uint _inventoryController = 0x978; // EFT.PlayerInventoryController update
             public const uint _handsController = 0x980; // EFT.PlayerHands update
             public const uint _playerLookRaycastTransform = 0xA10; // UnityEngine.Transform
+            public const uint _animators = 0x640; // IAnimator[] array
         }
 
         public readonly partial struct ObservedPlayerView
@@ -98,6 +129,7 @@ namespace SDK
 			public const uint GroupID = 0x80; // string
 			public const uint Side = 0x94; // EFT.EPlayerSide
 			public const uint IsAI = 0xA0; // bool
+			public const uint VoipId = 0xB0; // string - VOIP session ID
 			public const uint AccountId = 0xC0; // string
 			public const uint PlayerBody = 0xD8; // EFT.PlayerBody
         }
@@ -137,6 +169,7 @@ namespace SDK
             public const uint Id = 0x10; // String
             public const uint AccountId = 0x18; // String
             public const uint Info = 0x48; // -.\uE9AD
+            public const uint Skills = 0x80; // EFT.SkillManager
             public const uint TaskConditionCounters = 0x90; // Dictionary<MongoID, TaskConditionCounter>
             public const uint QuestsData = 0x98; // System.Collections.Generic.List<QuestStatusData>
         }
@@ -276,6 +309,7 @@ namespace SDK
             // WeaponAnimation removed - use Player.ProceduralWeaponAnimation (0x338) instead
             public const uint Fireport = 0x150; // EFT.BifacialTransform <Fireport> Fireport
             public const uint COI = 0xF0; // Single (was TotalCenterOfImpact at 0x2A0)
+            public const uint _aimingSens = 0x108; // Single — per-weapon aiming sensitivity (ergo-derived)
             public static readonly uint[] To_FirePortTransformInternal = new uint[] { Fireport, 0x10, 0x10 };
             public static readonly uint[] To_FirePortVertices = To_FirePortTransformInternal.Concat(new uint[] { UnityOffsets.TransformInternal_TransformAccessOffset, UnityOffsets.Hierarchy_VerticesOffset }).ToArray();
         }
@@ -298,6 +332,10 @@ namespace SDK
             public const uint CameraSmoothOut = 0x20c; // Single <CameraSmoothOut> CameraSmoothOut
             public const uint PositionZeroSum = 0x31c; // UnityEngine.Vector3 <PositionZeroSum> PositionZeroSum
             public const uint ShotNeedsFovAdjustments = 0x433; // Boolean <<ShotNeedsFovAdjustments>k__BackingField> <ShotNeedsFovAdjustments>k__BackingField
+            public const uint _firearmController = 0x138; // Player.FirearmController reference
+            public const uint _overweightAimingMultiplier = 0x168; // Single — overweight turn speed multiplier
+            public const uint _ergonomicWeight = 0x38C; // Single — weapon ergonomic weight
+            public const uint _aimingWeight = 0x398; // Single — composite aiming weight
         }
 
         public readonly partial struct SightNBone
@@ -315,6 +353,7 @@ namespace SDK
 
         public readonly partial struct SightInterface
         {
+            public const uint AimSensitivity = 0x1A8; // System.Single[][] — per-scope, per-mode sensitivity
             public const uint Zooms = 0x1B8; // System.Single[][]
         }
 
@@ -467,6 +506,86 @@ namespace SDK
         public readonly partial struct GamePlayerOwner
         {
             public const uint _myPlayer = 0x8; // EFT.Player (static field)
+        }
+
+        // MemWrite feature offsets
+
+        public readonly partial struct SkillManager
+        {
+            public const uint MagDrillsLoadSpeed = 0x180; // SkillValueContainer
+            public const uint MagDrillsUnloadSpeed = 0x188; // SkillValueContainer
+        }
+
+        public readonly partial struct SkillValueContainer
+        {
+            public const uint Value = 0x30; // float
+        }
+
+        public readonly partial struct TarkovApplication
+        {
+            public const uint _menuOperation = 0x130; // MainMenuShowOperation
+        }
+
+        public readonly partial struct MainMenuShowOperation
+        {
+            public const uint _afkMonitor = 0x38; // AfkMonitor
+        }
+
+        public readonly partial struct AfkMonitor
+        {
+            public const uint Delay = 0x10; // float (seconds)
+        }
+
+        public readonly partial struct BodyAnimator
+        {
+            public const uint UnityAnimator = 0x10; // UnityEngine.Animator
+        }
+
+        public readonly partial struct UnityAnimator
+        {
+            public const uint Speed = 0x4B0; // float (native Unity Animator speed)
+        }
+
+        public readonly partial struct BSGGameSetting
+        {
+            public const uint ValueClass = 0x28; // BSGGameSettingValueClass
+        }
+
+        public readonly partial struct BSGGameSettingValueClass
+        {
+            public const uint Value = 0x30; // float
+        }
+
+        public readonly partial struct InventoryBlur
+        {
+            public const uint _upsampleTexDimension = 0x30; // int (enum)
+            public const uint _blurCount = 0x38; // int
+        }
+
+        public readonly partial struct TOD_Scattering
+        {
+            public const uint Sky = 0x28; // TOD_Sky
+        }
+
+        public readonly partial struct TOD_Sky
+        {
+            public const uint Cycle = 0x38; // TOD_CycleParameters
+            public const uint TOD_Components = 0xA0; // TOD_Components
+        }
+
+        public readonly partial struct TOD_CycleParameters
+        {
+            public const uint Hour = 0x10; // float
+        }
+
+        public readonly partial struct TOD_Components
+        {
+            public const uint TOD_Time = 0x118; // TOD_Time
+        }
+
+        public readonly partial struct TOD_Time
+        {
+            public const uint LockCurrentTime = 0x20; // bool
         }
     }
 

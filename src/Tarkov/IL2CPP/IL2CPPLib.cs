@@ -30,25 +30,22 @@ namespace LoneEftDmaRadar.Tarkov.IL2CPP
                 _vmm = vmm;
                 _pid = pid;
 
-                // Check for cached GamePlayerOwner address
-                var cachedGpo = App.Config.DMA.CachedGamePlayerOwner;
-                if (cachedGpo != 0 && cachedGpo.IsValidUserVA())
-                {
-                    Initialized = true;
-                    DebugLogger.LogDebug("IL2CPP SDK Initialized (Cache).");
-                    return;
-                }
-
                 if (!vmm.Map_GetModuleFromName(pid, "GameAssembly.dll", out var module))
                     throw new InvalidOperationException("Could not find GameAssembly.dll module in target process.");
 
+                // Always resolve the type table — needed by FindClass at runtime (doors, etc.)
                 Resolve_TypeInfoDefinitionTable(ref module);
-                App.Config.DMA.CachedGamePlayerOwner = Class.FindClass("EFT.GamePlayerOwner");
-                _ = Task.Run(() => App.Config.Save());
+
+                // Cache GamePlayerOwner to avoid expensive FindClass on future startups
+                var cachedGpo = App.Config.DMA.CachedGamePlayerOwner;
+                if (cachedGpo == 0 || !cachedGpo.IsValidUserVA())
+                {
+                    App.Config.DMA.CachedGamePlayerOwner = Class.FindClass("EFT.GamePlayerOwner");
+                    _ = Task.Run(() => App.Config.Save());
+                }
 
                 Initialized = true;
                 DebugLogger.LogDebug("IL2CPP SDK Initialized.");
-                return;
             }
             catch
             {
@@ -121,31 +118,89 @@ namespace LoneEftDmaRadar.Tarkov.IL2CPP
             _vmm = default;
             _pid = default;
             Initialized = default;
+            gTypeInfoDefinitionTable = default;
+            gTypeCount = default;
         }
 
         private static void Resolve_TypeInfoDefinitionTable(ref Vmm.ModuleEntry module)
         {
-            try
-            {
-                ulong sig = _vmm.FindSignature(_pid, SDK.IL2CPPOffsets.TypeInfoDefinitionTableSig, module.vaBase, module.vaBase + module.cbImageSize);
-                sig.ThrowIfInvalidUserVA(nameof(sig));
+            var patterns = SDK.IL2CPPOffsets.TypeInfoDefinitionTableSigs;
+            ulong scanMin = module.vaBase;
+            ulong scanMax = module.vaBase + module.cbImageSize;
 
-                int disp32 = Memory.ReadValue<int>(sig + 3);
-                ulong typeDefPtrAddr = VmmSharpEx.Extensions.VmmExtensions.AddRVA(sig, 3 + 4, disp32);
-                gTypeInfoDefinitionTable = Memory.ReadValue<ulong>(typeDefPtrAddr);
-                gTypeInfoDefinitionTable.ThrowIfInvalidUserVA(nameof(gTypeInfoDefinitionTable));
-            }
-            catch (Exception ex)
+            for (int i = 0; i < patterns.Length; i++)
             {
-                DebugLogger.LogDebug($"Signature scan failed for TypeInfoDefinitionTable: {ex}. Falling back to static offsets.");
-                ulong staticOffset = module.vaBase + SDK.IL2CPPOffsets.TypeInfoDefinitionTable;
-                gTypeInfoDefinitionTable = Memory.ReadValue<ulong>(staticOffset);
-                gTypeInfoDefinitionTable.ThrowIfInvalidUserVA(nameof(gTypeInfoDefinitionTable));
+                try
+                {
+                    DebugLogger.LogDebug($"IL2CPP: Trying TypeInfoDefinitionTable pattern {i + 1}/{patterns.Length}...");
+                    ulong sig = _vmm.FindSignature(_pid, patterns[i], scanMin, scanMax);
+                    if (sig == 0 || !sig.IsValidUserVA())
+                        continue;
+
+                    // Find the MOV instruction that references the table pointer.
+                    // Pattern 0 ("48 C1 E9 04..."): scan forward from match for "48 89 05" (MOV [rip+disp32], rax)
+                    // Pattern 1 ("48 89 05..."): the MOV [rip+disp32] is at offset 0
+                    // Pattern 2 ("48 8B 05..."): the MOV rax,[rip+disp32] is at offset 0
+                    ulong movAddr;
+                    if (i == 0)
+                    {
+                        movAddr = ScanForwardForMov(sig + 9, 60);
+                        if (movAddr == 0)
+                            continue;
+                    }
+                    else
+                    {
+                        movAddr = sig;
+                    }
+
+                    int disp32 = Memory.ReadValue<int>(movAddr + 3);
+                    ulong typeDefPtrAddr = VmmSharpEx.Extensions.VmmExtensions.AddRVA(movAddr, 3 + 4, disp32);
+                    gTypeInfoDefinitionTable = Memory.ReadValue<ulong>(typeDefPtrAddr);
+                    if (!gTypeInfoDefinitionTable.IsValidUserVA())
+                        continue;
+
+                    // Try multiple offsets for type count (varies by IL2CPP version)
+                    int[] countOffsets = { -0x10, -0x8, -0x18, -0x20 };
+                    foreach (var offset in countOffsets)
+                    {
+                        try
+                        {
+                            gTypeCount = Memory.ReadValue<int>(gTypeInfoDefinitionTable + (ulong)offset) / 8;
+                            if (gTypeCount > 1 && gTypeCount < 100000)
+                                break;
+                        }
+                        catch { continue; }
+                    }
+
+                    if (gTypeCount < 1 || gTypeCount > 100000)
+                        continue;
+
+                    DebugLogger.LogDebug($"{nameof(gTypeInfoDefinitionTable)} @ 0x{gTypeInfoDefinitionTable:X} (Type Count: {gTypeCount}, Pattern: {i + 1})");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    DebugLogger.LogDebug($"IL2CPP: Pattern {i + 1} failed: {ex.Message}");
+                }
             }
-            gTypeCount = Memory.ReadValue<int>(gTypeInfoDefinitionTable - 0x10) / 8;
-            ArgumentOutOfRangeException.ThrowIfLessThan(gTypeCount, 1, nameof(gTypeCount));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(gTypeCount, 100000, nameof(gTypeCount));
-            DebugLogger.LogDebug($"{nameof(gTypeInfoDefinitionTable)} @ 0x{gTypeInfoDefinitionTable:X} (Type Count: {gTypeCount})");
+
+            throw new InvalidOperationException("Could not resolve TypeInfoDefinitionTable with any signature pattern.");
+        }
+
+        /// <summary>
+        /// Scan forward from an address looking for MOV [rip+disp32] instruction (48 89 05).
+        /// </summary>
+        private static ulong ScanForwardForMov(ulong startAddr, int maxBytes)
+        {
+            var chunk = _vmm.MemReadArray<byte>(_pid, startAddr, maxBytes);
+            if (chunk == null)
+                return 0;
+            for (int j = 0; j < chunk.Length - 2; j++)
+            {
+                if (chunk[j] == 0x48 && chunk[j + 1] == 0x89 && chunk[j + 2] == 0x05)
+                    return startAddr + (ulong)j;
+            }
+            return 0;
         }
 
         #region IL2CPP Attributes

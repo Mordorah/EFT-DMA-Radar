@@ -33,6 +33,7 @@ using LoneEftDmaRadar.Misc.Workers;
 using LoneEftDmaRadar.Tarkov.Features.MemWrites;
 using LoneEftDmaRadar.Tarkov.GameWorld.Exits;
 using LoneEftDmaRadar.Tarkov.GameWorld.Explosives;
+using LoneEftDmaRadar.Tarkov.GameWorld.Interactables;
 using LoneEftDmaRadar.Tarkov.GameWorld.Loot;
 using LoneEftDmaRadar.Tarkov.GameWorld.Player;
 using LoneEftDmaRadar.Tarkov.GameWorld.Player.Helpers;
@@ -58,15 +59,16 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld
         /// </summary>
         private ulong Base { get; }
 
-        private readonly RegisteredPlayers _rgtPlayers;
-        private readonly ExitManager _exfilManager;
-        private readonly ExplosivesManager _explosivesManager;
-        private readonly WorkerThread _t1;
-        private readonly WorkerThread _t2;
-        private readonly WorkerThread _t3;
-        private readonly WorkerThread _t4;
-        private readonly MemWritesManager _memWritesManager;
-        private readonly QuestManager _questManager;
+        private RegisteredPlayers _rgtPlayers;
+        private ExitManager _exfilManager;
+        private ExplosivesManager _explosivesManager;
+        private WorkerThread _t1;
+        private WorkerThread _t2;
+        private WorkerThread _t3;
+        private WorkerThread _t4;
+        private MemWritesManager _memWritesManager;
+        private QuestManager _questManager;
+        private WorldInteractablesManager _interactablesManager;
 
         // Pre-allocated list to avoid LINQ allocations in hot path
         private readonly List<AbstractPlayer> _activePlayersCache = new(32);
@@ -90,9 +92,10 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld
         public IReadOnlyCollection<IExplosiveItem> Explosives => _explosivesManager;
         public IReadOnlyCollection<IExitPoint> Exits => _exfilManager;
         public LocalPlayer LocalPlayer => _rgtPlayers?.LocalPlayer;
-        public LootManager Loot { get; }
+        public LootManager Loot { get; private set; }
         public QuestManager Quests => _questManager;
-        public IReadOnlyList<Hazards.IWorldHazard> Hazards { get; }
+        public IReadOnlyList<Hazards.IWorldHazard> Hazards { get; private set; }
+        public IReadOnlyList<Door> Doors => _interactablesManager?.Doors;
 
         /// <summary>
         /// True once the raid has started (player has control).
@@ -102,70 +105,133 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld
         private LocalGameWorld() { }
 
         /// <summary>
-        /// Game Constructor.
-        /// Only called internally.
+        /// Phase 1 Constructor — captures base address and map ID only.
+        /// Heavy initialization deferred to <see cref="WaitForRaidReady"/>.
         /// </summary>
         private LocalGameWorld(ulong localGameWorld, string mapID)
         {
+            Base = localGameWorld;
+            MapID = mapID;
+        }
+
+        /// <summary>
+        /// Phase 2 — waits for local player readiness, then initializes game data.
+        /// Camera initialization is handled separately by MemDMA game loop.
+        /// </summary>
+        private void WaitForRaidReady(CancellationToken ct)
+        {
             try
             {
-                Base = localGameWorld;
-                MapID = mapID;
-                // Reset boss spawn tracker for new raid (used for guard detection via spawn timing)
-                BossSpawnTracker.Reset();
-                _t1 = new WorkerThread()
+                // Wait until registered players are populated and MainPlayer is valid
+                const int maxAttempts = 60; // 60 × 500ms = 30s timeout
+                bool playerReady = false;
+                for (int i = 0; i < maxAttempts; i++)
                 {
-                    Name = "Realtime Worker",
-                    ThreadPriority = ThreadPriority.AboveNormal,
-                    SleepDuration = TimeSpan.FromMilliseconds(8),
-                    SleepMode = WorkerThreadSleepMode.DynamicSleep
-                };
-                _t1.PerformWork += RealtimeWorker_PerformWork;
-                _t2 = new WorkerThread()
-                {
-                    Name = "Slow Worker",
-                    ThreadPriority = ThreadPriority.BelowNormal,
-                    SleepDuration = TimeSpan.FromMilliseconds(50)
-                };
-                _t2.PerformWork += SlowWorker_PerformWork;
-                _t3 = new WorkerThread()
-                {
-                    Name = "Explosives Worker",
-                    SleepDuration = TimeSpan.FromMilliseconds(30),
-                    SleepMode = WorkerThreadSleepMode.DynamicSleep
-                };
-                _t3.PerformWork += ExplosivesWorker_PerformWork;
-                var rgtPlayersAddr = Memory.ReadPtr(localGameWorld + Offsets.GameWorld.RegisteredPlayers, false);
-                _rgtPlayers = new RegisteredPlayers(rgtPlayersAddr, this);
-                ArgumentOutOfRangeException.ThrowIfLessThan(_rgtPlayers.GetPlayerCount(), 1, nameof(_rgtPlayers));
-                Loot = new(localGameWorld);
-                _exfilManager = new(mapID, _rgtPlayers.LocalPlayer.IsPmc, localGameWorld);
-                _explosivesManager = new(localGameWorld);
-                // Load hazards from map data
-                if (TarkovDataManager.MapData.TryGetValue(MapID, out var mapData) && mapData.Hazards?.Count > 0)
-                {
-                    Hazards = mapData.Hazards.Cast<Hazards.IWorldHazard>().ToList();
+                    ct.ThrowIfCancellationRequested();
+                    try
+                    {
+                        if (IsLocalPlayerInRaid())
+                        {
+                            playerReady = true;
+                            DebugLogger.LogDebug($"[GameWorld] LocalPlayer confirmed in raid after {i + 1} attempt(s).");
+                            break;
+                        }
+                    }
+                    catch { /* Not ready yet */ }
+                    Thread.Sleep(500);
                 }
-                else
-                {
-                    Hazards = Array.Empty<Hazards.IWorldHazard>();
-                }
-                _memWritesManager = new MemWritesManager();
-                // Initialize quest manager with local player's profile
-                _questManager = new QuestManager(_rgtPlayers.LocalPlayer.Profile);
-                _t4 = new WorkerThread()
-                {
-                    Name = "MemWrites Worker",
-                    ThreadPriority = ThreadPriority.Normal,
-                    SleepDuration = TimeSpan.FromMilliseconds(100)
-                };
-                _t4.PerformWork += MemWritesWorker_PerformWork;
+                if (!playerReady)
+                    DebugLogger.LogDebug("[GameWorld] WARNING: LocalPlayer not confirmed after 30s — proceeding anyway.");
+
+                // Initialize all game data managers and worker threads
+                InitializeGameData(ct);
             }
+            catch (OperationCanceledException) { throw; }
             catch
             {
                 Dispose();
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Checks if the local player is present and registered players list is valid.
+        /// </summary>
+        private bool IsLocalPlayerInRaid()
+        {
+            var playerBase = Memory.ReadPtr(Base + Offsets.GameWorld.MainPlayer, false);
+            if (playerBase == 0 || !MemDMA.IsValidVirtualAddress(playerBase))
+                return false;
+
+            var rgtPlayersAddr = Memory.ReadPtr(Base + Offsets.GameWorld.RegisteredPlayers, false);
+            var count = Memory.ReadValue<int>(rgtPlayersAddr + 0x18, false); // ManagedList.Count
+            return count >= 1 && count < 100;
+        }
+
+        /// <summary>
+        /// Initializes all game data managers and worker threads.
+        /// </summary>
+        private void InitializeGameData(CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            BossSpawnTracker.Reset();
+            KillFeedManager.Reset();
+            App.PlayerHistory.OnNewRaid();
+            _t1 = new WorkerThread()
+            {
+                Name = "Realtime Worker",
+                ThreadPriority = ThreadPriority.AboveNormal,
+                SleepDuration = TimeSpan.FromMilliseconds(8),
+                SleepMode = WorkerThreadSleepMode.DynamicSleep
+            };
+            _t1.PerformWork += RealtimeWorker_PerformWork;
+            _t2 = new WorkerThread()
+            {
+                Name = "Slow Worker",
+                ThreadPriority = ThreadPriority.BelowNormal,
+                SleepDuration = TimeSpan.FromMilliseconds(50)
+            };
+            _t2.PerformWork += SlowWorker_PerformWork;
+            _t3 = new WorkerThread()
+            {
+                Name = "Explosives Worker",
+                SleepDuration = TimeSpan.FromMilliseconds(30),
+                SleepMode = WorkerThreadSleepMode.DynamicSleep
+            };
+            _t3.PerformWork += ExplosivesWorker_PerformWork;
+            var rgtPlayersAddr = Memory.ReadPtr(Base + Offsets.GameWorld.RegisteredPlayers, false);
+            _rgtPlayers = new RegisteredPlayers(rgtPlayersAddr, this);
+            var playerCount = _rgtPlayers.GetPlayerCount();
+            ArgumentOutOfRangeException.ThrowIfLessThan(playerCount, 1, nameof(_rgtPlayers));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(playerCount, 100, nameof(_rgtPlayers));
+            Loot = new(localGameWorld: Base);
+            _exfilManager = new(MapID, _rgtPlayers.LocalPlayer.IsPmc, Base);
+            _explosivesManager = new(Base);
+            if (TarkovDataManager.MapData.TryGetValue(MapID, out var mapData) && mapData.Hazards?.Count > 0)
+            {
+                Hazards = mapData.Hazards.Cast<Hazards.IWorldHazard>().ToList();
+            }
+            else
+            {
+                Hazards = Array.Empty<Hazards.IWorldHazard>();
+            }
+            try
+            {
+                _interactablesManager = new WorldInteractablesManager(Base);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.LogDebug($"[GameWorld] Failed to init interactables: {ex.Message}");
+            }
+            _memWritesManager = new MemWritesManager();
+            _questManager = new QuestManager(_rgtPlayers.LocalPlayer.Profile);
+            _t4 = new WorkerThread()
+            {
+                Name = "MemWrites Worker",
+                ThreadPriority = ThreadPriority.Normal,
+                SleepDuration = TimeSpan.FromMilliseconds(100)
+            };
+            _t4.PerformWork += MemWritesWorker_PerformWork;
         }
 
         /// <summary>
@@ -233,17 +299,21 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld
 
         /// <summary>
         /// Checks if a Raid has started.
-        /// Loads Local Game World resources.
+        /// Loads Local Game World resources using two-phase initialization.
+        /// Phase 1: Capture base address and map ID.
+        /// Phase 2: Wait for camera + player readiness, then init game data.
         /// </summary>
-        /// <returns>True if Raid has started, otherwise False.</returns>
         private static LocalGameWorld GetLocalGameWorld(CancellationToken ct)
         {
             try
             {
-                /// Get LocalGameWorld
                 var localGameWorld = GameObjectManager.Get().GetGameWorld(ct, out string map);
                 if (localGameWorld == 0) throw new Exception("GameWorld Address is 0");
-                return new LocalGameWorld(localGameWorld, map);
+                // Phase 1: Minimal constructor
+                var instance = new LocalGameWorld(localGameWorld, map);
+                // Phase 2: Wait for readiness, then initialize
+                instance.WaitForRaidReady(ct);
+                return instance;
             }
             catch (OperationCanceledException)
             {
@@ -395,6 +465,9 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld
 
                 // Refresh exfil statuses from memory (live status updates)
                 _exfilManager.RefreshStatuses();
+
+                // Refresh door states
+                _interactablesManager?.Refresh();
 
                 // Refresh quest tracking data
                 _questManager?.Refresh(ct);

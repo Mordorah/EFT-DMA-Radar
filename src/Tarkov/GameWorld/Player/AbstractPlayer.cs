@@ -540,11 +540,23 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         {
             if (isActiveParam is not bool isActive)
                 isActive = registered.Contains(this);
+
+            if (Corpse is not null) // Already dead — don't flip back to alive
+                return;
+
             if (isActive)
             {
-                SetAlive();
+                // Player still in registered list — but may have died (bots stay registered after death)
+                scatter.PrepareReadPtr(CorpseAddr);
+                scatter.Completed += (sender, x1) =>
+                {
+                    if (x1.ReadPtr(CorpseAddr, out var corpsePtr) && corpsePtr != 0)
+                        SetDead(corpsePtr);
+                    else
+                        SetAlive();
+                };
             }
-            else if (IsAlive) // Not in list, but alive
+            else if (IsAlive) // Not in list, but alive — player left or died
             {
                 scatter.PrepareReadPtr(CorpseAddr);
                 scatter.Completed += (sender, x1) =>
@@ -563,6 +575,8 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         /// <param name="corpse">Corpse address.</param>
         public void SetDead(ulong corpse)
         {
+            if (Corpse is null) // First death transition — push to kill feed
+                KillFeedManager.Push(Name, Type, PlayerSide);
             Corpse = corpse;
             IsActive = false;
         }
@@ -1399,6 +1413,10 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
             // Group ID
             if (GroupID != -1)
                 tooltip.AddRow("Group", $"#{GroupID}");
+
+            // VoipID (observed players only)
+            if (this is ObservedPlayer obs && obs.VoipId > 0)
+                tooltip.AddRow("VoipID", obs.VoipId.ToString());
 
             // Equipment info
             var isExpanded = TooltipCard.IsExpanded(this);

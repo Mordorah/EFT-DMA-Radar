@@ -25,6 +25,12 @@ namespace LoneEftDmaRadar.Tarkov.Features.MemWrites
             _features.Add(lp => NoRecoil.Instance.ApplyIfReady(lp));
             _features.Add(lp => InfiniteStamina.Instance.ApplyIfReady(lp));
             _features.Add(lp => MemoryAim.Instance.ApplyIfReady(lp));
+            _features.Add(lp => AntiAfk.Instance.ApplyIfReady(lp));
+            _features.Add(lp => FastWeaponOps.Instance.ApplyIfReady(lp));
+            _features.Add(lp => MagDrills.Instance.ApplyIfReady(lp));
+            _features.Add(lp => DisableHeadBobbing.Instance.ApplyIfReady(lp));
+            _features.Add(lp => DisableInventoryBlur.Instance.ApplyIfReady(lp));
+            _features.Add(lp => TimeOfDay.Instance.ApplyIfReady(lp));
         }
 
         /// <summary>
@@ -77,6 +83,12 @@ namespace LoneEftDmaRadar.Tarkov.Features.MemWrites
             NoRecoil.Instance.OnRaidStart();
             InfiniteStamina.Instance.OnRaidStart();
             MemoryAim.Instance.OnRaidStart();
+            AntiAfk.Instance.OnRaidStart();
+            FastWeaponOps.Instance.OnRaidStart();
+            MagDrills.Instance.OnRaidStart();
+            DisableHeadBobbing.Instance.OnRaidStart();
+            DisableInventoryBlur.Instance.OnRaidStart();
+            TimeOfDay.Instance.OnRaidStart();
         }
     }
 }

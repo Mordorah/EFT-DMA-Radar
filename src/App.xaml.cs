@@ -79,6 +79,14 @@ namespace LoneEftDmaRadar
         /// </summary>
         public static EftDmaConfig Config { get; }
         /// <summary>
+        /// Global Player Watchlist (persisted to disk).
+        /// </summary>
+        public static Tarkov.GameWorld.Player.Helpers.PlayerWatchlist Watchlist { get; } = new();
+        /// <summary>
+        /// Global Player History (in-memory, per-session).
+        /// </summary>
+        public static Tarkov.GameWorld.Player.Helpers.PlayerHistory PlayerHistory { get; } = new();
+        /// <summary>
         /// Service Provider for Dependency Injection.
         /// NOTE: Web Radar has it's own container.
         /// </summary>
@@ -104,6 +112,8 @@ namespace LoneEftDmaRadar
                 Config = EftDmaConfig.Load();
                 ServiceProvider = BuildServiceProvider();
                 HttpClientFactory = ServiceProvider.GetRequiredService<IHttpClientFactory>();
+                Watchlist.Load();
+                Misc.ConfigProfileManager.Initialize();
                 SetHighPerformanceMode();
             }
             catch (Exception ex)

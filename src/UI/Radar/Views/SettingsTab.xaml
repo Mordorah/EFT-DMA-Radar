@@ -17,6 +17,7 @@
         <StackPanel Orientation="Vertical"
                     Margin="0,0,0,10">
 
+            <!-- Quick Actions -->
             <WrapPanel Margin="0,0,0,12">
                 <Button Content="Restart Radar"
                         ToolTip="Restarts the Radar for the current raid instance. Zoom: F1/F2 | Fullscreen: F11"
@@ -31,18 +32,6 @@
                         MinWidth="100"
                         Height="35"
                         Margin="0,0,8,8" />
-                <Button Content="Open Config"
-                        ToolTip="Opens the config folder."
-                        Command="{Binding OpenConfigCommand}"
-                        MinWidth="100"
-                        Height="35"
-                        Margin="0,0,8,8" />
-                <Button Content="Backup Config"
-                        ToolTip="Backs up your configuration (Recommended)."
-                        Command="{Binding BackupConfigCommand}"
-                        MinWidth="100"
-                        Height="35"
-                        Margin="0,0,8,8" />
                 <Button Content="Refresh Data"
                         ToolTip="Force refresh item/quest data from tarkov.dev API. Use if quest tracking shows 0 tasks."
                         Command="{Binding RefreshDataCommand}"
@@ -50,6 +39,59 @@
                         Height="35"
                         Margin="0,0,8,8" />
             </WrapPanel>
+
+            <!-- Config Profiles -->
+            <GroupBox Header="Configuration"
+                      Margin="0,0,0,8">
+                <StackPanel Margin="4">
+                    <DockPanel Margin="0,0,0,6">
+                        <TextBlock Text="Profile:"
+                                   VerticalAlignment="Center"
+                                   Width="50" />
+                        <ComboBox ItemsSource="{Binding ProfileList}"
+                                  SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
+                                  Margin="4,0,0,0"
+                                  Width="160"
+                                  HorizontalAlignment="Left" />
+                    </DockPanel>
+                    <WrapPanel Margin="0,0,0,4">
+                        <Button Content="Load"
+                                ToolTip="Load the selected profile."
+                                Command="{Binding LoadProfileCommand}"
+                                Padding="10,3"
+                                Margin="0,0,6,4" />
+                        <Button Content="Save"
+                                ToolTip="Save current settings to the selected profile."
+                                Command="{Binding SaveProfileCommand}"
+                                Padding="10,3"
+                                Margin="0,0,6,4" />
+                        <Button Content="Save As..."
+                                ToolTip="Save current settings as a new profile."
+                                Command="{Binding SaveAsProfileCommand}"
+                                Padding="10,3"
+                                Margin="0,0,6,4" />
+                        <Button Content="Delete"
+                                ToolTip="Delete the selected profile."
+                                Command="{Binding DeleteProfileCommand}"
+                                Padding="10,3"
+                                Margin="0,0,6,4" />
+                        <Button Content="Open Folder"
+                                ToolTip="Opens the config folder."
+                                Command="{Binding OpenConfigCommand}"
+                                Padding="10,3"
+                                Margin="0,0,6,4" />
+                        <Button Content="Backup"
+                                ToolTip="Backs up your current configuration."
+                                Command="{Binding BackupConfigCommand}"
+                                Padding="10,3"
+                                Margin="0,0,6,4" />
+                    </WrapPanel>
+                    <TextBlock Text="{Binding ActiveProfileLabel}"
+                               FontSize="10"
+                               Foreground="{DynamicResource App.TextTertiaryBrush}"
+                               Margin="0,2,0,0" />
+                </StackPanel>
+            </GroupBox>
 
             <!-- Display card -->
             <GroupBox Header="Display"
@@ -135,6 +177,28 @@
                         <CheckBox Content="Mark Sus Players"
                                   ToolTip="Marks players as suspicious based on certain criteria (K/D, S/R, etc.)"
                                   IsChecked="{Binding MarkSusPlayers, Mode=TwoWay}"
+                                  Margin="0,0,16,8" />
+                        <CheckBox Content="Show Doors"
+                                  ToolTip="Shows doors on the radar map with lock state indicators."
+                                  IsChecked="{Binding ShowDoors, Mode=TwoWay}"
+                                  Margin="0,0,16,8" />
+                        <CheckBox Content="Locked Doors"
+                                  ToolTip="Show locked doors (red X markers)."
+                                  IsChecked="{Binding ShowLockedDoors, Mode=TwoWay}"
+                                  IsEnabled="{Binding ShowDoors}"
+                                  Margin="0,0,16,8" />
+                        <CheckBox Content="Unlocked Doors"
+                                  ToolTip="Show unlocked/open doors (yellow/green X markers)."
+                                  IsChecked="{Binding ShowUnlockedDoors, Mode=TwoWay}"
+                                  IsEnabled="{Binding ShowDoors}"
+                                  Margin="0,0,16,8" />
+                        <CheckBox Content="Show Switches"
+                                  ToolTip="Shows power switches on the radar map (cyan diamond markers)."
+                                  IsChecked="{Binding ShowSwitches, Mode=TwoWay}"
+                                  Margin="0,0,16,8" />
+                        <CheckBox Content="Show Card Readers"
+                                  ToolTip="Shows card readers on the radar map (magenta square markers)."
+                                  IsChecked="{Binding ShowCardReaders, Mode=TwoWay}"
                                   Margin="0,0,0,8" />
                     </WrapPanel>
 

@@ -64,28 +64,28 @@ namespace LoneEftDmaRadar
         /// </summary>
         [JsonPropertyName("ui")]
         [JsonInclude]
-        public UIConfig UI { get; private set; } = new();
+        public UIConfig UI { get; internal set; } = new();
 
         /// <summary>
         /// Web Radar Config
         /// </summary>
         [JsonPropertyName("webRadar")]
         [JsonInclude]
-        public WebRadarConfig WebRadar { get; private set; } = new();
+        public WebRadarConfig WebRadar { get; internal set; } = new();
 
         /// <summary>
         /// FilteredLoot Config
         /// </summary>
         [JsonPropertyName("loot")]
         [JsonInclude]
-        public LootConfig Loot { get; private set; } = new LootConfig();
+        public LootConfig Loot { get; internal set; } = new LootConfig();
 
         /// <summary>
         /// Containers configuration.
         /// </summary>
         [JsonPropertyName("containers")]
         [JsonInclude]
-        public ContainersConfig Containers { get; private set; } = new();
+        public ContainersConfig Containers { get; internal set; } = new();
 
         /// <summary>
         /// Hotkeys Dictionary for Radar.
@@ -107,70 +107,77 @@ namespace LoneEftDmaRadar
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("aimviewWidget")]
-        public AimviewWidgetConfig AimviewWidget { get; private set; } = new();
+        public AimviewWidgetConfig AimviewWidget { get; internal set; } = new();
 
         /// <summary>
         /// Widgets Configuration.
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("infoWidget")]
-        public InfoWidgetConfig InfoWidget { get; private set; } = new();
+        public InfoWidgetConfig InfoWidget { get; internal set; } = new();
+
+        /// <summary>
+        /// Kill Feed Configuration.
+        /// </summary>
+        [JsonInclude]
+        [JsonPropertyName("killFeed")]
+        public KillFeedConfig KillFeed { get; internal set; } = new();
 
         /// <summary>
         /// Settings for Device Aimbot (DeviceAimbot/KMBox).
         /// </summary>
         [JsonPropertyName("device")]
         [JsonInclude]
-        public DeviceAimbotConfig Device { get; private set; } = new();
+        public DeviceAimbotConfig Device { get; internal set; } = new();
 
         /// <summary>
         /// Settings for memory write based features.
         /// </summary>
         [JsonPropertyName("memWrites")]
         [JsonInclude]
-        public MemWritesConfig MemWrites { get; private set; } = new();
+        public MemWritesConfig MemWrites { get; internal set; } = new();
 
         /// <summary>
         /// Debug and performance tuning settings.
         /// </summary>
         [JsonPropertyName("debug")]
         [JsonInclude]
-        public DebugConfig Debug { get; private set; } = new();
+        public DebugConfig Debug { get; internal set; } = new();
 
         /// <summary>
         /// Quest Helper configuration.
         /// </summary>
         [JsonPropertyName("questHelper")]
         [JsonInclude]
-        public QuestHelperConfig QuestHelper { get; private set; } = new();
+        public QuestHelperConfig QuestHelper { get; internal set; } = new();
 
         /// <summary>
         /// Hideout item tracking configuration.
         /// </summary>
         [JsonPropertyName("hideout")]
         [JsonInclude]
-        public HideoutConfig Hideout { get; private set; } = new();
+        public HideoutConfig Hideout { get; internal set; } = new();
 
         /// <summary>
         /// FilteredLoot Filters Config.
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("lootFilters")]
-        public LootFilterConfig LootFilters { get; private set; } = new();
+        public LootFilterConfig LootFilters { get; internal set; } = new();
 
         /// <summary>
         /// Misc Config.
         /// </summary>
         [JsonPropertyName("misc")]
         [JsonInclude]
-        public MiscConfig Misc { get; private set; } = new();
+        public MiscConfig Misc { get; internal set; } = new();
 
         /// <summary>
         /// LOS Visibility Config.
         /// </summary>
         [JsonPropertyName("visibility")]
         [JsonInclude]
-        public VisibilityConfig Visibility { get; private set; } = new();
+        public VisibilityConfig Visibility { get; internal set; } = new();
 
         /// <summary>
         /// Panel Layout Config (floating panel positions/sizes).
@@ -563,6 +570,15 @@ namespace LoneEftDmaRadar
         /// </summary>
         [JsonPropertyName("espExfils")]
         public bool EspExfils { get; set; } = true;
+
+        [JsonPropertyName("espDoors")]
+        public bool EspDoors { get; set; } = true;
+
+        [JsonPropertyName("espSwitches")]
+        public bool EspSwitches { get; set; } = true;
+
+        [JsonPropertyName("espCardReaders")]
+        public bool EspCardReaders { get; set; } = true;
 
         [JsonPropertyName("espTripwires")]
         public bool EspTripwires { get; set; } = true;
@@ -980,6 +996,13 @@ namespace LoneEftDmaRadar
         public bool AdaptiveSmoothing { get; set; } = true;
 
         /// <summary>
+        /// Compensate for EFT's ergonomics/overweight turn speed reduction.
+        /// When enabled, scales aimbot output to counteract reduced sensitivity from
+        /// low-ergo weapons, high carry weight, and per-scope sensitivity multipliers.
+        /// </summary>
+        public bool ErgoCompensation { get; set; } = true;
+
+        /// <summary>
         /// Polling rate in Hz for the aimbot loop. Higher = more responsive but more CPU usage.
         /// Default: 125 Hz (~8ms per tick). Range: 30-1000 Hz.
         /// </summary>
@@ -1085,6 +1108,13 @@ namespace LoneEftDmaRadar
         public bool InfiniteStaminaEnabled { get; set; }
         public bool MemoryAimEnabled { get; set; }
         public Bones MemoryAimTargetBone { get; set; } = Bones.HumanHead;
+        public bool AntiAfkEnabled { get; set; }
+        public bool FastWeaponOpsEnabled { get; set; }
+        public bool MagDrillsEnabled { get; set; }
+        public bool DisableHeadBobbingEnabled { get; set; }
+        public bool DisableInventoryBlurEnabled { get; set; }
+        public bool TimeOfDayEnabled { get; set; }
+        public float TimeOfDayHour { get; set; } = 12f;
     }
 
     /// <summary>
@@ -1197,6 +1227,15 @@ namespace LoneEftDmaRadar
         [JsonPropertyName("location")]
         [JsonConverter(typeof(SKRectJsonConverter))]
         public SKRect Location { get; set; }
+    }
+
+    public sealed class KillFeedConfig
+    {
+        [JsonPropertyName("enabled")]
+        public bool Enabled { get; set; } = true;
+
+        [JsonPropertyName("maxAge")]
+        public int MaxAgeSeconds { get; set; } = 60;
     }
 
     /// <summary>
@@ -1413,6 +1452,21 @@ namespace LoneEftDmaRadar
         /// </summary>
         [JsonPropertyName("autoGroups")]
         public bool AutoGroups { get; set; } = true;
+
+        [JsonPropertyName("showDoors")]
+        public bool ShowDoors { get; set; } = true;
+
+        [JsonPropertyName("showLockedDoors")]
+        public bool ShowLockedDoors { get; set; } = true;
+
+        [JsonPropertyName("showUnlockedDoors")]
+        public bool ShowUnlockedDoors { get; set; } = false;
+
+        [JsonPropertyName("showSwitches")]
+        public bool ShowSwitches { get; set; } = true;
+
+        [JsonPropertyName("showCardReaders")]
+        public bool ShowCardReaders { get; set; } = true;
     }
 
     /// <summary>

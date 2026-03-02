@@ -34,6 +34,7 @@ using LoneEftDmaRadar.Tarkov.GameWorld.Camera;
 using LoneEftDmaRadar.Tarkov.GameWorld.Exits;
 using LoneEftDmaRadar.Tarkov.GameWorld.Explosives;
 using LoneEftDmaRadar.Tarkov.GameWorld.Hazards;
+using LoneEftDmaRadar.Tarkov.GameWorld.Interactables;
 using LoneEftDmaRadar.Tarkov.GameWorld.Loot;
 using LoneEftDmaRadar.Tarkov.GameWorld.Player;
 using LoneEftDmaRadar.Tarkov.GameWorld.Quests;
@@ -62,6 +63,7 @@ namespace LoneEftDmaRadar.DMA
         private static readonly string _mmap = Path.Combine(App.ConfigPath.FullName, "mmap.txt");
         private readonly Vmm _vmm;
         private readonly InputManager _input;
+        private readonly CancellationTokenSource _shutdownCts = new();
         private uint _pid;
         #region Restart Radar
 
@@ -99,6 +101,7 @@ namespace LoneEftDmaRadar.DMA
         public IReadOnlyCollection<IExplosiveItem> Explosives => Game?.Explosives;
         public IReadOnlyCollection<IExitPoint> Exits => Game?.Exits;
         public IReadOnlyList<IWorldHazard> Hazards => Game?.Hazards;
+        public IReadOnlyList<Door> Doors => Game?.Doors;
         public LocalPlayer LocalPlayer => Game?.LocalPlayer;
         public LootManager Loot => Game?.Loot;
         public QuestManager Quests => Game?.Quests;
@@ -193,15 +196,16 @@ namespace LoneEftDmaRadar.DMA
         private void MemoryPrimaryWorker()
         {
             DebugLogger.LogDebug("Memory thread starting...");
-            while (MainWindow.Instance is null)
+            while (MainWindow.Instance is null && !_shutdownCts.IsCancellationRequested)
                 Thread.Sleep(1);
-            while (true)
+            while (!_shutdownCts.IsCancellationRequested)
             {
                 try
                 {
-                    while (true) // Main Loop
+                    while (!_shutdownCts.IsCancellationRequested) // Main Loop
                     {
                         RunStartupLoop();
+                        if (_shutdownCts.IsCancellationRequested) break;
                         OnProcessStarted();
                         try
                         {
@@ -220,9 +224,11 @@ namespace LoneEftDmaRadar.DMA
                 {
                     DebugLogger.LogDebug($"FATAL ERROR on Memory Thread: {ex}");
                     OnProcessStopped();
-                    Thread.Sleep(1000);
+                    if (!_shutdownCts.IsCancellationRequested)
+                        Thread.Sleep(1000);
                 }
             }
+            DebugLogger.LogDebug("Memory thread exiting.");
         }
 
         #endregion
@@ -236,7 +242,7 @@ namespace LoneEftDmaRadar.DMA
         private void RunStartupLoop()
         {
             DebugLogger.LogDebug("New Process Startup");
-            while (true) // Startup loop
+            while (!_shutdownCts.IsCancellationRequested) // Startup loop
             {
                 try
                 {
@@ -244,6 +250,14 @@ namespace LoneEftDmaRadar.DMA
                     ResourceJanitor.Run();
                     LoadProcess();
                     LoadModules();
+                    try
+                    {
+                        Tarkov.IL2CPP.IL2CPPLib.Init(_vmm, _pid);
+                    }
+                    catch (Exception ex)
+                    {
+                        DebugLogger.LogDebug($"IL2CPP Init [FAIL]: {ex.Message}");
+                    }
                     this.Starting = true;
                     OnProcessStarting();
                     this.Ready = true;
@@ -254,7 +268,8 @@ namespace LoneEftDmaRadar.DMA
                 {
                     DebugLogger.LogDebug($"Process Startup [FAIL]: {ex}");
                     OnProcessStopped();
-                    Thread.Sleep(1000);
+                    if (!_shutdownCts.IsCancellationRequested)
+                        Thread.Sleep(1000);
                 }
             }
         }
@@ -773,8 +788,11 @@ namespace LoneEftDmaRadar.DMA
         {
             if (Interlocked.Exchange(ref _disposed, true) == false)
             {
+                _shutdownCts.Cancel();
                 _deviceAimbot?.Dispose();
+                _input?.Dispose();
                 _vmm.Dispose();
+                _shutdownCts.Dispose();
             }
         }
 
