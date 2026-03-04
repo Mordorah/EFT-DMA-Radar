@@ -218,9 +218,6 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Loot
 
         public virtual void Draw(SKCanvas canvas, EftMapParams mapParams, LocalPlayer localPlayer)
         {
-            if (IsQuestItem && !App.Config.Loot.ShowQuestItems)
-                return;
-
             var label = GetUILabel();
             var paints = GetPaints();
             var heightDiff = Position.Y - localPlayer.ReferenceHeight;
@@ -349,8 +346,6 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Loot
                 return new(SKPaints.PaintQuestItem, SKPaints.TextQuestItem);
             if (IsHideoutItem)
                 return new(SKPaints.PaintHideoutItem, SKPaints.TextHideoutItem);
-            if (LootFilter.ShowBackpacks && IsBackpack)
-                return new(SKPaints.PaintBackpacks, SKPaints.TextBackpacks);
             if (LootFilter.ShowMeds && IsMeds)
                 return new(SKPaints.PaintMeds, SKPaints.TextMeds);
             if (LootFilter.ShowFood && IsFood)

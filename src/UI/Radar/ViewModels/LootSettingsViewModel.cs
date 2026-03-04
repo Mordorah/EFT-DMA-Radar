@@ -11,7 +11,8 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
 
         public LootSettingsViewModel()
         {
-            LootFilter.ShowQuestItems = App.Config.Loot.ShowQuestItems;
+            LootFilter.ShowMeds = App.Config.Loot.ShowMeds;
+            LootFilter.ShowFood = App.Config.Loot.ShowFood;
         }
 
         private void OnPropertyChanged(string name)
@@ -166,6 +167,7 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
                 if (LootFilter.ShowMeds != value)
                 {
                     LootFilter.ShowMeds = value;
+                    App.Config.Loot.ShowMeds = value;
                     OnPropertyChanged(nameof(ShowMeds));
                 }
             }
@@ -179,52 +181,13 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
                 if (LootFilter.ShowFood != value)
                 {
                     LootFilter.ShowFood = value;
+                    App.Config.Loot.ShowFood = value;
                     OnPropertyChanged(nameof(ShowFood));
                 }
             }
         }
 
-        public bool ShowBackpacks
-        {
-            get => LootFilter.ShowBackpacks;
-            set
-            {
-                if (LootFilter.ShowBackpacks != value)
-                {
-                    LootFilter.ShowBackpacks = value;
-                    OnPropertyChanged(nameof(ShowBackpacks));
-                }
-            }
-        }
-
-        public bool ShowQuestItems
-        {
-            get => LootFilter.ShowQuestItems;
-            set
-            {
-                if (LootFilter.ShowQuestItems != value)
-                {
-                    LootFilter.ShowQuestItems = value;
-                    App.Config.Loot.ShowQuestItems = value;
-                    OnPropertyChanged(nameof(ShowQuestItems));
-                }
-            }
-        }
-
         // ─── Container settings ─────────────────────────────────────────────────
-
-        public int ContainerDistance
-        {
-            get => (int)Math.Round(App.Config.Containers.DrawDistance);
-            set
-            {
-                if (App.Config.Containers.DrawDistance != value)
-                {
-                    App.Config.Containers.DrawDistance = value;
-                    OnPropertyChanged(nameof(ContainerDistance));
-                }
-            }
-        }
 
         public int ContainerMinValue
         {

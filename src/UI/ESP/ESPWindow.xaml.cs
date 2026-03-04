@@ -432,8 +432,6 @@ namespace LoneEftDmaRadar.UI.ESP
                 bool isHideout = item.IsHideoutItem;
                 bool isImportant = item.Important; // User's custom filter list
 
-                if (isQuest && !App.Config.UI.EspQuestLoot)
-                    continue;
                 if (isCorpse && !App.Config.UI.EspCorpses)
                     continue;
 
@@ -443,16 +441,13 @@ namespace LoneEftDmaRadar.UI.ESP
 
                 bool isFood = item.IsFood;
                 bool isMeds = item.IsMeds;
-                bool isBackpack = item.IsBackpack;
 
                 // Skip category types if disabled, BUT Important/Hideout items always show
                 if (!isImportant && !isHideout)
                 {
-                    if (isFood && !App.Config.UI.EspFood)
+                    if (isFood && !App.Config.Loot.ShowFood)
                         continue;
-                    if (isMeds && !App.Config.UI.EspMeds)
-                        continue;
-                    if (isBackpack && !App.Config.UI.EspBackpacks)
+                    if (isMeds && !App.Config.Loot.ShowMeds)
                         continue;
                 }
 
@@ -495,10 +490,6 @@ namespace LoneEftDmaRadar.UI.ESP
                      else if (isHideout)
                      {
                          circleColor = ToColor(SKPaints.PaintHideoutItem);
-                     }
-                     else if (isBackpack)
-                     {
-                         circleColor = ToColor(SKPaints.PaintBackpacks);
                      }
                      else if (isMeds)
                      {
@@ -1273,15 +1264,12 @@ namespace LoneEftDmaRadar.UI.ESP
                  bool isCorpse = item is LootCorpse;
                  bool isQuest = item.IsQuestItem;
                  bool isHideout = item.IsHideoutItem;
-                 bool isBackpack = item.IsBackpack;
                  bool isMeds = item.IsMeds;
                  bool isFood = item.IsFood;
 
-                 if (isQuest && !App.Config.UI.EspQuestLoot) continue;
                  if (isCorpse && !App.Config.UI.EspCorpses) continue;
-                 if (isBackpack && !App.Config.UI.EspBackpacks) continue;
-                 if (isMeds && !App.Config.UI.EspMeds) continue;
-                 if (isFood && !App.Config.UI.EspFood) continue;
+                 if (isMeds && !App.Config.Loot.ShowMeds) continue;
+                 if (isFood && !App.Config.Loot.ShowFood) continue;
 
                  // Match radar GetPaints color order
                  SKColor color;
@@ -1289,8 +1277,6 @@ namespace LoneEftDmaRadar.UI.ESP
                      color = SKPaints.PaintQuestItem.Color;
                  else if (isHideout)
                      color = SKPaints.PaintHideoutItem.Color;
-                 else if (isBackpack)
-                     color = SKPaints.PaintBackpacks.Color;
                  else if (isMeds)
                      color = SKPaints.PaintMeds.Color;
                  else if (isFood)

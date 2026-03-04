@@ -35,9 +35,6 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Explosives
 {
     public sealed class ExplosivesManager : IReadOnlyCollection<IExplosiveItem>
     {
-        private static readonly uint[] _toSyncObjects = [
-            Offsets.GameWorld.SynchronizableObjectLogicProcessor,
-            Offsets.SynchronizableObjectLogicProcessor.SynchronizableObjects];
         private readonly ulong _localGameWorld;
         private readonly ConcurrentDictionary<ulong, IExplosiveItem> _explosives = new();
 
@@ -114,33 +111,43 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Explosives
             }
         }
 
+        private static readonly uint[] _toTripwireList = [
+            Offsets.GameWorld.SynchronizableObjectLogicProcessor,
+            Offsets.SynchronizableObjectLogicProcessor.TripwireManager,
+            Offsets.TripwireManager.Tripwires];
+
         private void GetTripwires(CancellationToken ct)
         {
             try
             {
-                var syncObjectsPtr = Memory.ReadPtrChain(_localGameWorld, true, _toSyncObjects);
-                using var syncObjects = UnityList<ulong>.Create(syncObjectsPtr, true);
-                foreach (var syncObject in syncObjects)
+                var tripwireListPtr = Memory.ReadPtrChain(_localGameWorld, true, _toTripwireList);
+                using var tripwires = UnityList<ulong>.Create(tripwireListPtr, true);
+
+                // Purge tripwires no longer in the live list
+                foreach (var key in _explosives.Keys)
+                {
+                    if (_explosives.TryGetValue(key, out var val) && val is Tripwire && !tripwires.Contains(key))
+                        _ = _explosives.TryRemove(key, out _);
+                }
+
+                foreach (var tripwire in tripwires)
                 {
                     ct.ThrowIfCancellationRequested();
                     try
                     {
-                        var type = (Enums.SynchronizableObjectType)Memory.ReadValue<int>(syncObject + Offsets.SynchronizableObject.Type);
-                        if (type is not Enums.SynchronizableObjectType.Tripwire)
-                            continue;
                         _ = _explosives.GetOrAdd(
-                            syncObject,
+                            tripwire,
                             addr => new Tripwire(addr));
                     }
                     catch (Exception ex)
                     {
-                        DebugLogger.LogDebug($"Error Processing SyncObject @ 0x{syncObject.ToString("X")}: {ex}");
+                        DebugLogger.LogDebug($"Error Processing Tripwire @ 0x{tripwire.ToString("X")}: {ex}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                DebugLogger.LogDebug($"Sync Objects Error: {ex}");
+                DebugLogger.LogDebug($"Tripwires Error: {ex}");
             }
         }
 

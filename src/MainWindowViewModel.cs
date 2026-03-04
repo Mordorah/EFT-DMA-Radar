@@ -174,12 +174,7 @@ namespace LoneEftDmaRadar
 
         private void ToggleShowQuestItems_HotkeyStateChanged(object sender, HotkeyEventArgs e)
         {
-            if (e.State)
-            {
-                UI.Loot.LootFilter.ShowQuestItems = !UI.Loot.LootFilter.ShowQuestItems;
-                App.Config.Loot.ShowQuestItems = UI.Loot.LootFilter.ShowQuestItems;
-                Memory.Loot?.RefreshFilter();
-            }
+            // Quest items now always show when loot is enabled — hotkey is a no-op
         }
 
         private void EngageAimbotDeviceAimbot_HotkeyStateChanged(object sender, HotkeyEventArgs e)

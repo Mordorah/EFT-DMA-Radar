@@ -99,11 +99,6 @@
                     <CheckBox Content="Show Food"
                               IsChecked="{Binding ShowFood}"
                               Margin="0,0,12,0" />
-                    <CheckBox Content="Show Backpacks"
-                              IsChecked="{Binding ShowBackpacks}"
-                              Margin="0,0,12,0" />
-                    <CheckBox Content="Show Quest Items"
-                              IsChecked="{Binding ShowQuestItems}" />
                 </WrapPanel>
             </GroupBox>
 
@@ -111,40 +106,21 @@
             <GroupBox Header="Containers"
                       Margin="0,0,0,8"
                       Visibility="{Binding ShowStaticContainers, Converter={StaticResource BoolToVis}}">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal"
-                                VerticalAlignment="Center"
-                                Margin="0,0,16,8">
-                        <TextBlock Text="Container Distance"
-                                   VerticalAlignment="Center" />
-                        <Slider x:Name="ContainerDistSlider"
-                                Width="150"
-                                Margin="8,0"
-                                Minimum="0"
-                                Maximum="1000"
-                                SmallChange="10"
-                                LargeChange="100"
-                                Value="{Binding ContainerDistance, Mode=TwoWay}" />
-                        <TextBlock Text="{Binding Value, ElementName=ContainerDistSlider}"
-                                   VerticalAlignment="Center"
-                                   Margin="8,0,0,0" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal"
-                                Margin="0,0,16,8">
-                        <TextBlock Text="Min Value (0=All)"
-                                   VerticalAlignment="Center" />
-                        <Slider x:Name="ContainerMinValueSlider"
-                                Width="150"
-                                Margin="8,0"
-                                Minimum="0"
-                                Maximum="500000"
-                                SmallChange="10000"
-                                LargeChange="50000"
-                                Value="{Binding ContainerMinValue, Mode=TwoWay}" />
-                        <TextBlock Text="{Binding Value, ElementName=ContainerMinValueSlider, StringFormat='{}{0:N0}'}"
-                                   VerticalAlignment="Center"
-                                   Margin="8,0,0,0" />
-                    </StackPanel>
+                <StackPanel Orientation="Horizontal"
+                            Margin="0,0,16,8">
+                    <TextBlock Text="Min Value (0=All)"
+                               VerticalAlignment="Center" />
+                    <Slider x:Name="ContainerMinValueSlider"
+                            Width="150"
+                            Margin="8,0"
+                            Minimum="0"
+                            Maximum="500000"
+                            SmallChange="10000"
+                            LargeChange="50000"
+                            Value="{Binding ContainerMinValue, Mode=TwoWay}" />
+                    <TextBlock Text="{Binding Value, ElementName=ContainerMinValueSlider, StringFormat='{}{0:N0}'}"
+                               VerticalAlignment="Center"
+                               Margin="8,0,0,0" />
                 </StackPanel>
             </GroupBox>
 

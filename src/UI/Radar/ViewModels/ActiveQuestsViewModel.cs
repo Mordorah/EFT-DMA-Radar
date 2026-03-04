@@ -56,18 +56,6 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             }
         }
 
-        public bool ShowQuestItems
-        {
-            get => App.Config.Loot.ShowQuestItems;
-            set
-            {
-                if (App.Config.Loot.ShowQuestItems != value)
-                {
-                    App.Config.Loot.ShowQuestItems = value;
-                    OnPropertyChanged(nameof(ShowQuestItems));
-                }
-            }
-        }
 
         #endregion
 

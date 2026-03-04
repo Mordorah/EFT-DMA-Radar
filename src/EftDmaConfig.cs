@@ -611,12 +611,6 @@ namespace LoneEftDmaRadar
         public bool EspLoot { get; set; } = true;
 
         /// <summary>
-        /// Show quest items on ESP.
-        /// </summary>
-        [JsonPropertyName("espQuestLoot")]
-        public bool EspQuestLoot { get; set; } = true;
-
-        /// <summary>
         /// Show quest locations/zones on ESP.
         /// </summary>
         [JsonPropertyName("espQuestLocations")]
@@ -633,24 +627,6 @@ namespace LoneEftDmaRadar
 
         [JsonPropertyName("espLootConeAngle")]
         public float EspLootConeAngle { get; set; } = 15f;
-
-        /// <summary>
-        /// Show Food items on ESP.
-        /// </summary>
-        [JsonPropertyName("espFood")]
-        public bool EspFood { get; set; } = false;
-
-        /// <summary>
-        /// Show Medical items on ESP.
-        /// </summary>
-        [JsonPropertyName("espMeds")]
-        public bool EspMeds { get; set; } = false;
-
-        /// <summary>
-        /// Show Backpacks on ESP.
-        /// </summary>
-        [JsonPropertyName("espBackpacks")]
-        public bool EspBackpacks { get; set; } = false;
 
         /// <summary>
         /// Show Corpses on ESP.
@@ -854,10 +830,16 @@ namespace LoneEftDmaRadar
         public bool Enabled { get; set; } = true;
 
         /// <summary>
-        /// Show quest items on map/ESP.
+        /// Show medical items on map/ESP.
         /// </summary>
-        [JsonPropertyName("showQuestItems")]
-        public bool ShowQuestItems { get; set; } = true;
+        [JsonPropertyName("showMeds")]
+        public bool ShowMeds { get; set; } = false;
+
+        /// <summary>
+        /// Show food items on map/ESP.
+        /// </summary>
+        [JsonPropertyName("showFood")]
+        public bool ShowFood { get; set; } = false;
 
         /// <summary>
         /// Shows bodies/corpses on map.

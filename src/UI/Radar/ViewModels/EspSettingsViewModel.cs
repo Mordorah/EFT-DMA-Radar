@@ -331,45 +331,6 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             }
         }
 
-        public bool EspFood
-        {
-            get => App.Config.UI.EspFood;
-            set
-            {
-                if (App.Config.UI.EspFood != value)
-                {
-                    App.Config.UI.EspFood = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        public bool EspMeds
-        {
-            get => App.Config.UI.EspMeds;
-            set
-            {
-                if (App.Config.UI.EspMeds != value)
-                {
-                    App.Config.UI.EspMeds = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        public bool EspBackpacks
-        {
-            get => App.Config.UI.EspBackpacks;
-            set
-            {
-                if (App.Config.UI.EspBackpacks != value)
-                {
-                    App.Config.UI.EspBackpacks = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
         public bool EspCorpses
         {
             get => App.Config.UI.EspCorpses;
@@ -762,19 +723,6 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
                 if (Math.Abs(App.Config.Containers.EspDrawDistance - value) > float.Epsilon)
                 {
                     App.Config.Containers.EspDrawDistance = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        public int EspContainerMinValue
-        {
-            get => App.Config.Containers.MinValue;
-            set
-            {
-                if (App.Config.Containers.MinValue != value)
-                {
-                    App.Config.Containers.MinValue = value;
                     OnPropertyChanged();
                 }
             }

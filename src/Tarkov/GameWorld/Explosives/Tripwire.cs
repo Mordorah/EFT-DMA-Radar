@@ -42,7 +42,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Explosives
     public sealed class Tripwire : IExplosiveItem, IWorldEntity, IMapEntity
     {
         public static implicit operator ulong(Tripwire x) => x.Addr;
-        private bool _isActive;
+        private bool _isActive = true; // Default active — only deactivate on confirmed destroyed/inert state
         private bool _destroyed;
 
         /// <summary>

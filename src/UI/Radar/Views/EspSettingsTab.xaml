@@ -187,56 +187,20 @@
                 </StackPanel>
             </GroupBox>
 
-            <!-- Loot, Exfils & Explosives card -->
-            <GroupBox Header="Loot, Exfils &amp; Explosives" Margin="0,0,0,8">
+            <!-- Loot card -->
+            <GroupBox Header="Loot" Margin="0,0,0,8">
                 <StackPanel>
-                     <WrapPanel>
+                    <WrapPanel>
                         <CheckBox Content="Show Loot" IsChecked="{Binding EspLoot, Mode=TwoWay}" Margin="0,0,16,8" />
                         <CheckBox Content="Show Prices" IsChecked="{Binding EspLootPrice, Mode=TwoWay}" Margin="0,0,16,8" IsEnabled="{Binding EspLoot}" />
-                        <CheckBox Content="Show Exfils" IsChecked="{Binding EspExfils, Mode=TwoWay}" Margin="0,0,16,8" />
-                        <CheckBox Content="Show Doors" IsChecked="{Binding EspDoors, Mode=TwoWay}" Margin="0,0,16,8" />
-                        <CheckBox Content="Show Switches" IsChecked="{Binding EspSwitches, Mode=TwoWay}" Margin="0,0,16,8" />
-                        <CheckBox Content="Show Card Readers" IsChecked="{Binding EspCardReaders, Mode=TwoWay}" Margin="0,0,16,8" />
-                        <CheckBox Content="Show Tripwires" IsChecked="{Binding EspTripwires, Mode=TwoWay}" Margin="0,0,16,8" />
-                        <CheckBox Content="Show Grenades" IsChecked="{Binding EspGrenades, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Corpses" IsChecked="{Binding EspCorpses, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Containers" IsChecked="{Binding EspContainers, Mode=TwoWay}" Margin="0,0,16,8" />
                         <CheckBox Content="Loot Cone Filter"
                                   IsChecked="{Binding EspLootConeEnabled, Mode=TwoWay}"
                                   Margin="0,0,16,8" />
-                     </WrapPanel>
-                     <WrapPanel Margin="0,4,0,0" Visibility="{Binding EspGrenades, Converter={StaticResource BoolToVis}}">
-                        <CheckBox Content="Show Grenade Trail"
-                                  IsChecked="{Binding EspGrenadeTrail, Mode=TwoWay}"
-                                  Margin="0,0,16,0" />
-                        <TextBlock Text="Trail Length:"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,8,0" />
-                        <Slider x:Name="EspGrenadeTrailLengthSlider"
-                                Width="120"
-                                Margin="8,0"
-                                Minimum="10"
-                                Maximum="200"
-                                SmallChange="5"
-                                LargeChange="20"
-                                Value="{Binding EspGrenadeTrailLength, Mode=TwoWay}"
-                                IsEnabled="{Binding EspGrenadeTrail}" />
-                        <TextBlock Text="{Binding Value, ElementName=EspGrenadeTrailLengthSlider, StringFormat='{}{0:F0}'}"
-                                   VerticalAlignment="Center"
-                                   Margin="8,0,0,0" />
-                        <CheckBox Content="Show Blast Radius"
-                                  IsChecked="{Binding EspGrenadeBlastRadius, Mode=TwoWay}"
-                                  Margin="16,0,0,0" />
-                     </WrapPanel>
-                     <WrapPanel Margin="0,4,0,0">
-                        <CheckBox Content="Show Food" IsChecked="{Binding EspFood, Mode=TwoWay}" Margin="0,0,16,8" />
-                        <CheckBox Content="Show Meds" IsChecked="{Binding EspMeds, Mode=TwoWay}" Margin="0,0,16,8" />
-                        <CheckBox Content="Show Backpacks" IsChecked="{Binding EspBackpacks, Mode=TwoWay}" Margin="0,0,16,8" />
-                        <CheckBox Content="Show Quest Items" IsChecked="{Binding EspQuestLoot, Mode=TwoWay}" Margin="0,0,16,8" />
-                        <CheckBox Content="Show Quest Zones" IsChecked="{Binding EspQuestLocations, Mode=TwoWay}" Margin="0,0,16,8" />
-                        <CheckBox Content="Show Corpses" IsChecked="{Binding EspCorpses, Mode=TwoWay}" Margin="0,0,16,8" />
-                        <CheckBox Content="Show Containers" IsChecked="{Binding EspContainers, Mode=TwoWay}" Margin="0,0,16,8" />
-                     </WrapPanel>
-                     <StackPanel Visibility="{Binding EspContainers, Converter={StaticResource BoolToVis}}">
-                         <WrapPanel Margin="0,4,0,0">
+                    </WrapPanel>
+                    <StackPanel Visibility="{Binding EspContainers, Converter={StaticResource BoolToVis}}">
+                        <WrapPanel Margin="0,4,0,0">
                             <TextBlock Text="Container Draw Distance"
                                        VerticalAlignment="Center" />
                             <Slider x:Name="EspContainerDistanceSlider"
@@ -250,24 +214,9 @@
                             <TextBlock Text="{Binding Value, ElementName=EspContainerDistanceSlider, StringFormat='{}{0:F0}'}"
                                        VerticalAlignment="Center"
                                        Margin="8,0,0,0" />
-                         </WrapPanel>
-                         <WrapPanel Margin="0,4,0,0">
-                            <TextBlock Text="Min Value (0=All)"
-                                       VerticalAlignment="Center" />
-                            <Slider x:Name="EspContainerMinValueSlider"
-                                    Width="150"
-                                    Margin="8,0"
-                                    Minimum="0"
-                                    Maximum="500000"
-                                    SmallChange="10000"
-                                    LargeChange="50000"
-                                    Value="{Binding EspContainerMinValue, Mode=TwoWay}" />
-                            <TextBlock Text="{Binding Value, ElementName=EspContainerMinValueSlider, StringFormat='{}{0:N0}'}"
-                                       VerticalAlignment="Center"
-                                       Margin="8,0,0,0" />
-                         </WrapPanel>
-                     </StackPanel>
-                     <WrapPanel Margin="0,4,0,0" Visibility="{Binding EspLootConeEnabled, Converter={StaticResource BoolToVis}}">
+                        </WrapPanel>
+                    </StackPanel>
+                    <WrapPanel Margin="0,4,0,0" Visibility="{Binding EspLootConeEnabled, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="Cone Angle"
                                    VerticalAlignment="Center" />
                         <Slider x:Name="LootConeSlider"
@@ -281,7 +230,7 @@
                         <TextBlock Text="{Binding Value, ElementName=LootConeSlider, StringFormat=F0}"
                                    VerticalAlignment="Center"
                                    Margin="8,0,0,0" />
-                     </WrapPanel>
+                    </WrapPanel>
                     <WrapPanel Margin="0,4,0,0">
                         <TextBlock Text="Loot Draw Distance (0 = Unlimited):" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <Slider x:Name="LootDistanceSlider"
@@ -305,12 +254,42 @@
                             <controls:NeonColorSwatch
                                               SelectedColor="{Binding EspColorContainers, Mode=TwoWay, Converter={StaticResource StringToColorConverter}}"/>
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="Exfil:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <controls:NeonColorSwatch
-                                              SelectedColor="{Binding EspColorExfil, Mode=TwoWay, Converter={StaticResource StringToColorConverter}}"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
+                    </WrapPanel>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Explosives card -->
+            <GroupBox Header="Explosives" Margin="0,0,0,8">
+                <StackPanel>
+                    <WrapPanel>
+                        <CheckBox Content="Show Tripwires" IsChecked="{Binding EspTripwires, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Grenades" IsChecked="{Binding EspGrenades, Mode=TwoWay}" Margin="0,0,16,8" />
+                    </WrapPanel>
+                    <WrapPanel Margin="0,4,0,0" Visibility="{Binding EspGrenades, Converter={StaticResource BoolToVis}}">
+                        <CheckBox Content="Show Grenade Trail"
+                                  IsChecked="{Binding EspGrenadeTrail, Mode=TwoWay}"
+                                  Margin="0,0,16,0" />
+                        <TextBlock Text="Trail Length:"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0" />
+                        <Slider x:Name="EspGrenadeTrailLengthSlider"
+                                Width="120"
+                                Margin="8,0"
+                                Minimum="10"
+                                Maximum="200"
+                                SmallChange="5"
+                                LargeChange="20"
+                                Value="{Binding EspGrenadeTrailLength, Mode=TwoWay}"
+                                IsEnabled="{Binding EspGrenadeTrail}" />
+                        <TextBlock Text="{Binding Value, ElementName=EspGrenadeTrailLengthSlider, StringFormat='{}{0:F0}'}"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0" />
+                        <CheckBox Content="Show Blast Radius"
+                                  IsChecked="{Binding EspGrenadeBlastRadius, Mode=TwoWay}"
+                                  Margin="16,0,0,0" />
+                    </WrapPanel>
+                    <WrapPanel Margin="0,4,0,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="Tripwire:" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <controls:NeonColorSwatch
                                               SelectedColor="{Binding EspColorTripwire, Mode=TwoWay, Converter={StaticResource StringToColorConverter}}"/>
@@ -319,6 +298,26 @@
                             <TextBlock Text="Grenade:" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <controls:NeonColorSwatch
                                               SelectedColor="{Binding EspColorGrenade, Mode=TwoWay, Converter={StaticResource StringToColorConverter}}"/>
+                        </StackPanel>
+                    </WrapPanel>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Misc card -->
+            <GroupBox Header="Misc" Margin="0,0,0,8">
+                <StackPanel>
+                    <WrapPanel>
+                        <CheckBox Content="Show Exfils" IsChecked="{Binding EspExfils, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Doors" IsChecked="{Binding EspDoors, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Switches" IsChecked="{Binding EspSwitches, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Card Readers" IsChecked="{Binding EspCardReaders, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Quest Zones" IsChecked="{Binding EspQuestLocations, Mode=TwoWay}" Margin="0,0,16,8" />
+                    </WrapPanel>
+                    <WrapPanel Margin="0,4,0,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Exfil:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <controls:NeonColorSwatch
+                                              SelectedColor="{Binding EspColorExfil, Mode=TwoWay, Converter={StaticResource StringToColorConverter}}"/>
                         </StackPanel>
                     </WrapPanel>
                 </StackPanel>

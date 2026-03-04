@@ -62,6 +62,12 @@ namespace SDK
         public readonly partial struct SynchronizableObjectLogicProcessor
         {
             public const uint SynchronizableObjects = 0x10; // _activeSynchronizableObjects (active airdrops/tripwires; 0x18 = static only)
+            public const uint TripwireManager = 0x40; // EFT.SynchronizableObjects.TripwireManager
+        }
+
+        public readonly partial struct TripwireManager
+        {
+            public const uint Tripwires = 0x10; // List<TripwireSynchronizableObject>
         }
 
         public readonly partial struct TripwireSynchronizableObject

@@ -223,40 +223,37 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Loot
             if (!PassesMinValueFilter())
                 return;
 
-            if (Position.WithinDistance(localPlayer.Position, App.Config.Containers.DrawDistance))
+            var label = GetContainerLabel();
+            var paints = GetContainerPaints();
+            var heightDiff = Position.Y - localPlayer.ReferenceHeight;
+            var point = Position.ToMapPos(mapParams.Map).ToZoomedPos(mapParams);
+            MouseoverPosition = new Vector2(point.X, point.Y);
+            SKPaints.ShapeOutline.StrokeWidth = 2f;
+            var widgetFont = CustomFontManager.GetCurrentRadarWidgetFont();
+
+            if (heightDiff > 1.45) // loot is above player
             {
-                var label = GetContainerLabel();
-                var paints = GetContainerPaints();
-                var heightDiff = Position.Y - localPlayer.ReferenceHeight;
-                var point = Position.ToMapPos(mapParams.Map).ToZoomedPos(mapParams);
-                MouseoverPosition = new Vector2(point.X, point.Y);
-                SKPaints.ShapeOutline.StrokeWidth = 2f;
-                var widgetFont = CustomFontManager.GetCurrentRadarWidgetFont();
-
-                if (heightDiff > 1.45) // loot is above player
-                {
-                    var adjustedPoint = new SKPoint(point.X, point.Y + 3 * App.Config.UI.UIScale);
-                    canvas.DrawText("▲", adjustedPoint, SKTextAlign.Center, widgetFont, SKPaints.TextOutline);
-                    canvas.DrawText("▲", adjustedPoint, SKTextAlign.Center, widgetFont, paints.Item1);
-                }
-                else if (heightDiff < -1.45) // loot is below player
-                {
-                    var adjustedPoint = new SKPoint(point.X, point.Y + 3 * App.Config.UI.UIScale);
-                    canvas.DrawText("▼", adjustedPoint, SKTextAlign.Center, widgetFont, SKPaints.TextOutline);
-                    canvas.DrawText("▼", adjustedPoint, SKTextAlign.Center, widgetFont, paints.Item1);
-                }
-                else // loot is level with player
-                {
-                    var adjustedPoint = new SKPoint(point.X, point.Y + 3 * App.Config.UI.UIScale);
-                    canvas.DrawText("●", adjustedPoint, SKTextAlign.Center, widgetFont, SKPaints.TextOutline);
-                    canvas.DrawText("●", adjustedPoint, SKTextAlign.Center, widgetFont, paints.Item1);
-                }
-
-                // Draw label with value
-                point.Offset(7 * App.Config.UI.UIScale, 3 * App.Config.UI.UIScale);
-                canvas.DrawText(label, point, SKTextAlign.Left, widgetFont, SKPaints.TextOutline);
-                canvas.DrawText(label, point, SKTextAlign.Left, widgetFont, paints.Item2);
+                var adjustedPoint = new SKPoint(point.X, point.Y + 3 * App.Config.UI.UIScale);
+                canvas.DrawText("▲", adjustedPoint, SKTextAlign.Center, widgetFont, SKPaints.TextOutline);
+                canvas.DrawText("▲", adjustedPoint, SKTextAlign.Center, widgetFont, paints.Item1);
             }
+            else if (heightDiff < -1.45) // loot is below player
+            {
+                var adjustedPoint = new SKPoint(point.X, point.Y + 3 * App.Config.UI.UIScale);
+                canvas.DrawText("▼", adjustedPoint, SKTextAlign.Center, widgetFont, SKPaints.TextOutline);
+                canvas.DrawText("▼", adjustedPoint, SKTextAlign.Center, widgetFont, paints.Item1);
+            }
+            else // loot is level with player
+            {
+                var adjustedPoint = new SKPoint(point.X, point.Y + 3 * App.Config.UI.UIScale);
+                canvas.DrawText("●", adjustedPoint, SKTextAlign.Center, widgetFont, SKPaints.TextOutline);
+                canvas.DrawText("●", adjustedPoint, SKTextAlign.Center, widgetFont, paints.Item1);
+            }
+
+            // Draw label with value
+            point.Offset(7 * App.Config.UI.UIScale, 3 * App.Config.UI.UIScale);
+            canvas.DrawText(label, point, SKTextAlign.Left, widgetFont, SKPaints.TextOutline);
+            canvas.DrawText(label, point, SKTextAlign.Left, widgetFont, paints.Item2);
         }
 
         // Cached label — value doesn't change mid-raid

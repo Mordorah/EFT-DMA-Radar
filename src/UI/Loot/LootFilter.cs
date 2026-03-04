@@ -38,8 +38,6 @@ namespace LoneEftDmaRadar.UI.Loot
         public static string SearchString;
         public static bool ShowMeds;
         public static bool ShowFood;
-        public static bool ShowBackpacks;
-        public static bool ShowQuestItems;
         public static bool ShowHideoutItems;
 
         /// <summary>
@@ -52,19 +50,16 @@ namespace LoneEftDmaRadar.UI.Loot
             bool usePrices = string.IsNullOrEmpty(search);
             bool showMeds = ShowMeds;
             bool showFood = ShowFood;
-            bool showBackpacks = ShowBackpacks;
-            bool showQuestItems = ShowQuestItems;
             bool showHideoutItems = ShowHideoutItems;
             if (usePrices)
             {
                 Predicate<LootItem> p = x => // Default Predicate
                 {
-                    if (x.IsQuestItem && showQuestItems)
+                    if (x.IsQuestItem)
                         return true;
                     if (x.IsHideoutItem && showHideoutItems)
                         return true;
                     return (x.IsRegularLoot || x.IsValuableLoot || x.IsImportant) ||
-                                (showBackpacks && x.IsBackpack) ||
                                 (showMeds && x.IsMeds) ||
                                 (showFood && x.IsFood);
                 };

@@ -620,19 +620,6 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             }
         }
 
-        public bool EspQuestLoot
-        {
-            get => App.Config.UI.EspQuestLoot;
-            set
-            {
-                if (App.Config.UI.EspQuestLoot != value)
-                {
-                    App.Config.UI.EspQuestLoot = value;
-                    OnPropertyChanged(nameof(EspQuestLoot));
-                }
-            }
-        }
-
         public bool EspQuestLocations
         {
             get => App.Config.UI.EspQuestLocations;
