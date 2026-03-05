@@ -148,11 +148,10 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
 
                 if (IsScoped)
                 {
-                    float angleRadHalf = (MathF.PI / 180f) * _fov * 0.5f;
-                    float angleCtg = MathF.Cos(angleRadHalf) / MathF.Sin(angleRadHalf);
-
-                    x /= angleCtg * _aspect * 0.5f;
-                    y /= angleCtg * 0.5f;
+                    // Optic camera VP matrix uses square aspect (1.0) but screen is widescreen.
+                    // Unity stretches the optic render to fill the screen, so we compensate x
+                    // by dividing by the screen aspect ratio. No y correction needed.
+                    x /= _aspect;
                 }
 
                 var center = ViewportCenter;
