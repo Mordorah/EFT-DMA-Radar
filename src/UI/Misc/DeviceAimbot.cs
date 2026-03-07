@@ -522,7 +522,7 @@ namespace LoneEftDmaRadar.UI.Misc
                 {
                     // IMPORTANT: use same W2S style as ESP - "in" + default flags
                     // Disable on-screen check so viewport issues don't discard candidates.
-                    if (CameraManager.WorldToScreen(in bone.Position, out var screenPos, false))
+                    if (CameraManager.WorldToScreenFPS(in bone.Position, out var screenPos))
                     {
                         anyBoneProjected = true;
                         float fovDist = CameraManager.GetFovMagnitude(screenPos);
@@ -646,7 +646,7 @@ private bool ShouldTargetPlayer(AbstractPlayer player, LocalPlayer localPlayer)
 
             foreach (var bone in target.Skeleton.BoneTransforms.Values)
             {
-                if (CameraManager.WorldToScreen(in bone.Position, out var screenPos, false))
+                if (CameraManager.WorldToScreenFPS(in bone.Position, out var screenPos))
                 {
                     anyBoneProjected = true;
                     float fovDist = CameraManager.GetFovMagnitude(screenPos);
@@ -863,7 +863,7 @@ private bool ShouldTargetPlayer(AbstractPlayer player, LocalPlayer localPlayer)
                 if ((hitscanMask & (1u << i)) == 0) continue;
                 var bone = BoneMappings.IndexToBone[i];
                 if (!bones.TryGetValue(bone, out var bt)) continue;
-                if (CameraManager.WorldToScreen(in bt.Position, out var sp))
+                if (CameraManager.WorldToScreenFPS(in bt.Position, out var sp))
                 {
                     float fov = CameraManager.GetFovMagnitude(sp);
                     if (fov < bestFov)
@@ -923,7 +923,7 @@ private bool ShouldTargetPlayer(AbstractPlayer player, LocalPlayer localPlayer)
 
                 foreach (var kvp in bones)
                 {
-                    if (CameraManager.WorldToScreen(in kvp.Value.Position, out var screenPos))
+                    if (CameraManager.WorldToScreenFPS(in kvp.Value.Position, out var screenPos))
                     {
                         float fov = CameraManager.GetFovMagnitude(screenPos);
                         if (fov < bestFov)
@@ -994,13 +994,13 @@ private bool ShouldTargetPlayer(AbstractPlayer player, LocalPlayer localPlayer)
 
             // Original DeviceAimbot device aiming (only if MemoryAim is disabled)
             // Convert to screen space — both predicted (for aiming) and raw (for velocity tracking)
-            if (!CameraManager.WorldToScreen(ref targetPos, out var screenPos, false))
+            if (!CameraManager.WorldToScreenFPS(in targetPos, out var screenPos))
                 return;
 
             // Also W2S the raw bone position for velocity tracking (prevents prediction offset
             // from being misinterpreted as target movement)
             Vector3 rawForW2S = rawTargetPos;
-            if (!CameraManager.WorldToScreen(ref rawForW2S, out var rawScreenPos, false))
+            if (!CameraManager.WorldToScreenFPS(in rawForW2S, out var rawScreenPos))
                 rawScreenPos = screenPos; // Fallback if raw W2S fails
 
             // Update target screen velocity using RAW bone position (Fix #2)

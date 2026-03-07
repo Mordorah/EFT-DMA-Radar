@@ -24,51 +24,57 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
     {
         private const int VIEWPORT_TOLERANCE = 800;
 
-        static CameraManager()
-        {
-            MemDMA.ProcessStarting += MemDMA_ProcessStarting;
-            MemDMA.ProcessStopped += MemDMA_ProcessStopped;
-        }
-
-        private static void MemDMA_ProcessStarting(object sender, EventArgs e) { }
-        private static void MemDMA_ProcessStopped(object sender, EventArgs e) { }
+        static CameraManager() { }
         public static ulong FPSCameraPtr { get; private set; }
         public static ulong OpticCameraPtr { get; private set; }
-        public static ulong ActiveCameraPtr { get; private set; }
+
 
         private static readonly Lock _viewportSync = new();
         public static Rectangle Viewport { get; private set; }
         public static SKPoint ViewportCenter => new SKPoint(Viewport.Width / 2f, Viewport.Height / 2f);
         public static bool IsScoped { get; private set; }
+        public static float ScopeZoom { get; private set; } = 1f;
         public static bool IsADS { get; private set; }
         public static bool IsInitialized { get; private set; } = false;
         private static float _fov;
         private static float _aspect;
         private static readonly ViewMatrix _viewMatrix = new();
+        private static readonly ViewMatrix _opticViewMatrix = new();
+        private static float _fpsRightMag;
+        private static float _fpsUpMag;
+        private static float _opticRightMag;
+        private static float _opticUpMag;
+        private static float _opticRightMag1x;
+        private static float _opticUpMag1x;
         public static Vector3 CameraPosition => new(_viewMatrix.M14, _viewMatrix.M24, _viewMatrix.Translation.Z);
     
         public static void Reset()
         {
             var identity = Matrix4x4.Identity;
             _viewMatrix.Update(ref identity);
+            _opticViewMatrix.Update(ref identity);
             Viewport = new Rectangle();
-            ActiveCameraPtr = 0;
             OpticCameraPtr = 0;
             FPSCameraPtr = 0;
             _fov = 0f;
             _aspect = 0f;
+            _fpsRightMag = 0f;
+            _fpsUpMag = 0f;
+            _opticRightMag = 0f;
+            _opticUpMag = 0f;
+            _opticRightMag1x = 0f;
+            _opticUpMag1x = 0f;
+            ScopeZoom = 1f;
             IsInitialized = false;
             _potentialOpticCameras.Clear();
             _useFpsCameraForCurrentAds = false;
+            _maxOpticFov = 0f;
         }
         public ulong FPSCamera { get; }
-        public ulong OpticCamera { get; }
-        private ulong _fpsMatrixAddress;
-        private ulong _opticMatrixAddress;
-        private bool OpticCameraActive => OpticCameraPtr != 0;
 
         private static readonly List<ulong> _potentialOpticCameras = new();
         private static bool _useFpsCameraForCurrentAds = false;
+        private static float _maxOpticFov;
 
         public static void UpdateViewportRes()
         {
@@ -115,6 +121,15 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
         }
 
         /// <summary>
+        /// World-to-screen using FPS camera VP only (no optic VP). Use for aimbot —
+        /// the FPS VP is stable (no scope sway) and matches mouse input rotation.
+        /// </summary>
+        public static bool WorldToScreenFPS(ref readonly Vector3 worldPos, out SKPoint scrPos)
+        {
+            return WorldToScreenWithScale(in worldPos, out scrPos, out _, false, false, forceFpsVP: true);
+        }
+
+        /// <summary>
         /// Converts a world position to screen coordinates with distance-based scale factor.
         /// </summary>
         /// <param name="worldPos">World position to convert</param>
@@ -123,7 +138,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
         /// <param name="onScreenCheck">Check if position is on screen</param>
         /// <param name="useTolerance">Use tolerance for on-screen check</param>
         /// <returns>True if conversion succeeded and position is valid</returns>
-        public static bool WorldToScreenWithScale(in Vector3 worldPos, out SKPoint scrPos, out float scale, bool onScreenCheck = false, bool useTolerance = false)
+        public static bool WorldToScreenWithScale(in Vector3 worldPos, out SKPoint scrPos, out float scale, bool onScreenCheck = false, bool useTolerance = false, bool forceFpsVP = false)
         {
             const float REFERENCE_DISTANCE = 50f; // Reference distance for scale = 1.0
             const float MIN_SCALE = 0.3f;         // Minimum scale factor
@@ -131,7 +146,14 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
 
             try
             {
-                float w = Vector3.Dot(_viewMatrix.Translation, worldPos) + _viewMatrix.M44;
+                // When scoped, use optic camera VP (projects from scope's position,
+                // naturally handles zoom level). Scale by FPS/Optic VP magnitude ratio
+                // to map the optic's square projection to the widescreen viewport.
+                // When unscoped (or forceFpsVP for aimbot), use FPS VP directly.
+                bool useOptic = !forceFpsVP && IsScoped && _opticRightMag1x > 0.1f && _opticUpMag1x > 0.1f;
+                var vm = useOptic ? _opticViewMatrix : _viewMatrix;
+
+                float w = Vector3.Dot(vm.Translation, worldPos) + vm.M44;
 
                 if (w < 0.098f)
                 {
@@ -143,15 +165,19 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                 // Calculate scale based on distance (w is approximately the distance)
                 scale = Math.Clamp(REFERENCE_DISTANCE / w, MIN_SCALE, MAX_SCALE);
 
-                float x = Vector3.Dot(_viewMatrix.Right, worldPos) + _viewMatrix.M14;
-                float y = Vector3.Dot(_viewMatrix.Up, worldPos) + _viewMatrix.M24;
+                float x = Vector3.Dot(vm.Right, worldPos) + vm.M14;
+                float y = Vector3.Dot(vm.Up, worldPos) + vm.M24;
 
-                if (IsScoped)
+                if (useOptic)
                 {
-                    // Optic camera VP matrix uses square aspect (1.0) but screen is widescreen.
-                    // Unity stretches the optic render to fill the screen, so we compensate x
-                    // by dividing by the screen aspect ratio. No y correction needed.
-                    x /= _aspect;
+                    // Map optic VP's square projection to screen coordinates.
+                    // Divide by the 1x optic magnitude (scope circle size on screen),
+                    // NOT the current magnitude. The current magnitude encodes the zoom
+                    // (6x higher at 6x zoom), so preserving it gives correct zoom scaling.
+                    // Multiply by FPS magnitude to get screen-pixel scale.
+                    // Projects from the scope's physical position → no mount offset.
+                    x *= _fpsRightMag / _opticRightMag1x;
+                    y *= _fpsUpMag / _opticUpMag1x;
                 }
 
                 var center = ViewportCenter;
@@ -221,12 +247,8 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                     throw new InvalidOperationException("Could not find required FPS Camera!");
 
                 FPSCamera = fps;
-                _fpsMatrixAddress = GetMatrixAddress(FPSCamera, "FPS");
-
                 FPSCameraPtr = FPSCamera;
                 OpticCameraPtr = 0;
-                ActiveCameraPtr = 0;
-                _opticMatrixAddress = 0;
 
                 CacheOpticCameras(listItemsPtr, count);
 
@@ -240,33 +262,6 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
             }
         }
 
-        private static ulong GetMatrixAddress(ulong cameraPtr, string cameraType)
-        {
-            // Camera (Component) → GameObject
-            var gameObject = Memory.ReadPtr(cameraPtr + UnitySDK.UnityOffsets.Component_GameObjectOffset, false);
-
-            if (gameObject == 0 || gameObject > 0x7FFFFFFFFFFF)
-                throw new InvalidOperationException($"Invalid {cameraType} GameObject: 0x{gameObject:X}");
-
-            // GameObject + Components offset → Pointer1
-            var ptr1 = Memory.ReadPtr(gameObject + UnitySDK.UnityOffsets.GameObject_ComponentsOffset, false);
-
-            if (ptr1 == 0 || ptr1 > 0x7FFFFFFFFFFF)
-                throw new InvalidOperationException($"Invalid {cameraType} Ptr1 (GameObject+UnitySDK.UnityOffsets.GameObject_ComponentsOffset): 0x{ptr1:X}");
-                
-            // Pointer1 + 0x18 → matrixAddress
-            var matrixAddress = Memory.ReadPtr(ptr1 + 0x18, false);
-
-            if (matrixAddress == 0 || matrixAddress > 0x7FFFFFFFFFFF)
-                throw new InvalidOperationException($"Invalid {cameraType} matrixAddress (Ptr1+0x18): 0x{matrixAddress:X}");
-
-            return matrixAddress;
-        }
-
-        private static void VerifyViewMatrix(ulong matrixAddress, string name)
-        {
-            // Verbose matrix logging removed - only log on errors if needed
-        }
 
         private static ulong FindFpsCamera(ulong listItemsPtr, int count)
         {
@@ -319,8 +314,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
         {
             try
             {
-                var matrixAddress = GetMatrixAddress(cameraPtr, "Optic");
-                var vm = Memory.ReadValue<Matrix4x4>(matrixAddress + UnitySDK.UnityOffsets.Camera_ViewMatrixOffset, false);
+                var vm = Memory.ReadValue<Matrix4x4>(cameraPtr + UnitySDK.UnityOffsets.Camera_ViewMatrixOffset, false);
 
                 if (Math.Abs(vm.M44) < 0.001f)
                     return false;
@@ -356,58 +350,33 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
         /// </summary>
         public static float ScopeSensitivity { get; private set; } = 1.0f;
 
-        private bool CheckIfScoped(LocalPlayer localPlayer)
+        /// <summary>
+        /// Reads scope sensitivity for aimbot compensation. Does NOT determine zoom level.
+        /// Zoom is computed from optic camera FOV in OnRealtimeLoop scatter callback.
+        /// </summary>
+        private void UpdateScopeSensitivity(LocalPlayer localPlayer)
         {
             try
             {
-                if (localPlayer is null)
-                {
-                    ScopeSensitivity = 1.0f;
-                    return false;
-                }
-
-                if (!OpticCameraActive)
-                {
-                    ScopeSensitivity = 1.0f;
-                    return false;
-                }
+                if (localPlayer is null) return;
 
                 var opticsPtr = Memory.ReadPtr(localPlayer.PWA + Offsets.ProceduralWeaponAnimation._optics);
-
                 using var optics = UnityList<VmmPointer>.Create(opticsPtr, true);
 
-                if (optics.Count > 0)
-                {
-                    var pSightComponent = Memory.ReadPtr(optics[0] + Offsets.SightNBone.Mod);
-                    var sightComponent = Memory.ReadValue<SightComponent>(pSightComponent);
+                if (optics.Count <= 0) return;
 
-                    // Read per-sight sensitivity multiplier for aimbot compensation
-                    float sensitivity = sightComponent.GetSensitivity();
-                    if (sensitivity > 0f && sensitivity < 10f)
-                        ScopeSensitivity = sensitivity;
-                    else
-                        ScopeSensitivity = 1.0f;
+                var pSightComponent = Memory.ReadPtr(optics[0] + Offsets.SightNBone.Mod);
+                var sightComponent = Memory.ReadValue<SightComponent>(pSightComponent);
 
-                    if (sightComponent.ScopeZoomValue != 0f)
-                    {
-                        // Use > 1.05f threshold to avoid float imprecision for 1x sights
-                        bool result = sightComponent.ScopeZoomValue > 1.05f;
-                        return result;
-                    }
-
-                    float zoomLevel = sightComponent.GetZoomLevel();
-                    // Use > 1.05f threshold to avoid float imprecision for 1x sights
-                    bool zoomResult = zoomLevel > 1.05f;
-                    return zoomResult;
-                }
-
-                ScopeSensitivity = 1.0f;
-                return false;
+                float sensitivity = sightComponent.GetSensitivity();
+                if (sensitivity > 0f && sensitivity < 10f)
+                    ScopeSensitivity = sensitivity;
+                else
+                    ScopeSensitivity = 1.0f;
             }
             catch
             {
                 ScopeSensitivity = 1.0f;
-                return false;
             }
         }
 
@@ -420,6 +389,11 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                 if (!IsADS)
                 {
                     _useFpsCameraForCurrentAds = false;
+                    _maxOpticFov = 0f;
+                    _opticRightMag1x = 0f;
+                    _opticUpMag1x = 0f;
+                    ScopeZoom = 1f;
+                    IsScoped = false;
                 }
 
                 if (IsADS && OpticCameraPtr == 0 && !_useFpsCameraForCurrentAds)
@@ -435,46 +409,91 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                     }
                 }
 
-                IsScoped = IsADS && CheckIfScoped(localPlayer);
+                if (IsADS)
+                    UpdateScopeSensitivity(localPlayer);
 
-                ulong vmAddr;
-                if (IsADS && IsScoped && OpticCameraPtr != 0 && _opticMatrixAddress != 0)
+                // Always read FPS camera VP matrix + FOV + aspect
+                ulong fpsVmAddr = FPSCameraPtr + UnitySDK.UnityOffsets.Camera_ViewMatrixOffset;
+                var fovAddr = FPSCameraPtr + UnitySDK.UnityOffsets.Camera_FOVOffset;
+                var aspectAddr = FPSCameraPtr + UnitySDK.UnityOffsets.Camera_AspectRatioOffset;
+
+                scatter.PrepareReadValue<Matrix4x4>(fpsVmAddr);
+                scatter.PrepareReadValue<float>(fovAddr);
+                scatter.PrepareReadValue<float>(aspectAddr);
+
+                // When scoped, also read optic camera VP matrix + FOV
+                ulong opticVmAddr = 0;
+                ulong opticFovAddr = 0;
+                if (IsADS && OpticCameraPtr != 0)
                 {
-                    vmAddr = _opticMatrixAddress + UnitySDK.UnityOffsets.Camera_ViewMatrixOffset;
+                    opticVmAddr = OpticCameraPtr + UnitySDK.UnityOffsets.Camera_ViewMatrixOffset;
+                    opticFovAddr = OpticCameraPtr + UnitySDK.UnityOffsets.Camera_FOVOffset;
+                    scatter.PrepareReadValue<Matrix4x4>(opticVmAddr);
+                    scatter.PrepareReadValue<float>(opticFovAddr);
                 }
-                else
-                {
-                    vmAddr = _fpsMatrixAddress + UnitySDK.UnityOffsets.Camera_ViewMatrixOffset;
-                    if (OpticCameraPtr == 0 || _opticMatrixAddress == 0)
-                        IsScoped = false;
-                }
-                scatter.PrepareReadValue<Matrix4x4>(vmAddr);
+
+                var capturedOpticVmAddr = opticVmAddr;
+                var capturedOpticFovAddr = opticFovAddr;
+
                 scatter.Completed += (sender, s) =>
                 {
-                    if (s.ReadValue<Matrix4x4>(vmAddr, out var vm))
+                    // FPS camera VP (always used as reference, and for unscoped W2S)
+                    if (s.ReadValue<Matrix4x4>(fpsVmAddr, out var fpsVm))
                     {
-                        if (!Unsafe.IsNullRef(ref vm))
-                            _viewMatrix.Update(ref vm);
+                        if (!Unsafe.IsNullRef(ref fpsVm))
+                        {
+                            _viewMatrix.Update(ref fpsVm);
+                            // Column magnitudes of raw VP matrix (= what ViewMatrix uses after transpose)
+                            _fpsRightMag = MathF.Sqrt(fpsVm.M11 * fpsVm.M11 + fpsVm.M21 * fpsVm.M21 + fpsVm.M31 * fpsVm.M31);
+                            _fpsUpMag = MathF.Sqrt(fpsVm.M12 * fpsVm.M12 + fpsVm.M22 * fpsVm.M22 + fpsVm.M32 * fpsVm.M32);
+                        }
+                    }
+
+                    if (s.ReadValue<float>(fovAddr, out var fov) && fov > 1f && fov < 180f)
+                        _fov = fov;
+
+                    if (s.ReadValue<float>(aspectAddr, out var aspect) && aspect > 0.1f && aspect < 5f)
+                        _aspect = aspect;
+
+                    // Optic camera VP (used for scoped W2S — projects from scope position)
+                    if (capturedOpticVmAddr != 0 &&
+                        s.ReadValue<Matrix4x4>(capturedOpticVmAddr, out var opticVm))
+                    {
+                        if (!Unsafe.IsNullRef(ref opticVm))
+                        {
+                            _opticViewMatrix.Update(ref opticVm);
+                            _opticRightMag = MathF.Sqrt(opticVm.M11 * opticVm.M11 + opticVm.M21 * opticVm.M21 + opticVm.M31 * opticVm.M31);
+                            _opticUpMag = MathF.Sqrt(opticVm.M12 * opticVm.M12 + opticVm.M22 * opticVm.M22 + opticVm.M32 * opticVm.M32);
+                        }
+                    }
+
+                    // Compute zoom from optic camera FOV changes
+                    if (capturedOpticFovAddr != 0 &&
+                        s.ReadValue<float>(capturedOpticFovAddr, out var opticFov) &&
+                        opticFov > 0.5f && opticFov < 90f)
+                    {
+                        // Track widest FOV = 1x reference. Capture 1x VP magnitudes.
+                        if (opticFov > _maxOpticFov)
+                        {
+                            _maxOpticFov = opticFov;
+                            // Store the optic VP magnitudes at 1x (widest FOV = lowest zoom)
+                            // These define the scope circle size on screen.
+                            if (_opticRightMag > 0.1f)
+                                _opticRightMag1x = _opticRightMag;
+                            if (_opticUpMag > 0.1f)
+                                _opticUpMag1x = _opticUpMag;
+                        }
+
+                        if (_maxOpticFov > 1f)
+                        {
+                            float baseHalfRad = _maxOpticFov * MathF.PI / 360f;
+                            float currHalfRad = opticFov * MathF.PI / 360f;
+                            float zoom = MathF.Tan(baseHalfRad) / MathF.Tan(currHalfRad);
+                            ScopeZoom = zoom;
+                            IsScoped = zoom > 1.05f;
+                        }
                     }
                 };
-
-                if (IsScoped)
-                {
-                    var fovAddr = FPSCamera + UnitySDK.UnityOffsets.Camera_FOVOffset;
-                    var aspectAddr = FPSCamera + UnitySDK.UnityOffsets.Camera_AspectRatioOffset;
-
-                    scatter.PrepareReadValue<float>(fovAddr); // FOV
-                    scatter.PrepareReadValue<float>(aspectAddr); // Aspect
-
-                    scatter.Completed += (sender, s) =>
-                    {
-                        if (s.ReadValue<float>(fovAddr, out var fov))
-                            _fov = fov;
-
-                        if (s.ReadValue<float>(aspectAddr, out var aspect))
-                            _aspect = aspect;
-                    };
-                }
             }
             catch (Exception ex)
             {
@@ -493,9 +512,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                 {
                     if (ValidateOpticCameraMatrix(cameraPtr))
                     {
-                        // Found a valid optic camera, set it up
                         OpticCameraPtr = cameraPtr;
-                        _opticMatrixAddress = GetMatrixAddress(cameraPtr, "Optic");
                         return true;
                     }
                 }
@@ -566,34 +583,6 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
             [FieldOffset((int)Offsets.SightComponent.SelectedScope)]
             private readonly int SelectedScope;
 
-            [FieldOffset((int)Offsets.SightComponent.ScopeZoomValue)]
-            public readonly float ScopeZoomValue;
-
-            public readonly float GetZoomLevel()
-            {
-                try
-                {
-                    using var zoomArray = SightInterface.Zooms;
-                    if (SelectedScope >= zoomArray.Count || SelectedScope is < 0 or > 10)
-                        return -1.0f;
-
-                    using var selectedScopeModes = UnityArray<int>.Create(pScopeSelectedModes, false);
-                    int selectedScopeMode = SelectedScope >= selectedScopeModes.Count ? 0 : selectedScopeModes[SelectedScope];
-                    ulong zoomAddr = zoomArray[SelectedScope] + UnityArray<float>.ArrBaseOffset + (uint)selectedScopeMode * 0x4;
-
-                    float zoomLevel = Memory.ReadValue<float>(zoomAddr, false);
-                    if (zoomLevel.IsNormalOrZero() && zoomLevel is >= 0f and < 100f)
-                        return zoomLevel;
-
-                    return -1.0f;
-                }
-                catch (Exception ex)
-                {
-                    DebugLogger.LogDebug($"ERROR in GetZoomLevel: {ex}");
-                    return -1.0f;
-                }
-            }
-
             /// <summary>
             /// Gets the current aim sensitivity multiplier for this sight at its current scope and mode.
             /// Returns the per-optic sensitivity value from ISightComponentTemplate.AimSensitivity.
@@ -635,11 +624,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
             [FieldOffset((int)Offsets.SightInterface.AimSensitivity)]
             private readonly ulong pAimSensitivity;
 
-            [FieldOffset((int)Offsets.SightInterface.Zooms)]
-            private readonly ulong pZooms;
-
             public readonly UnityArray<ulong> AimSensitivity => UnityArray<ulong>.Create(pAimSensitivity, true);
-            public readonly UnityArray<ulong> Zooms => UnityArray<ulong>.Create(pZooms, true);
         }
 
         #endregion
@@ -654,7 +639,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                 IsScoped = IsScoped,
                 FPSCamera = FPSCameraPtr,
                 OpticCamera = OpticCameraPtr,
-                ActiveCamera = ActiveCameraPtr,
+
                 Fov = _fov,
                 Aspect = _aspect,
                 M14 = _viewMatrix.M14,
@@ -680,7 +665,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
             public bool IsScoped { get; init; }
             public ulong FPSCamera { get; init; }
             public ulong OpticCamera { get; init; }
-            public ulong ActiveCamera { get; init; }
+
             public float Fov { get; init; }
             public float Aspect { get; init; }
             public float M14 { get; init; }
