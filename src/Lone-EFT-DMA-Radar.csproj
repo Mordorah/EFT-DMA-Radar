@@ -95,7 +95,9 @@
 
 	<ItemGroup>
 		<EmbeddedResource Include="..\Resources\NeoSansStdRegular.otf" />
-		<EmbeddedResource Include="..\Resources\DEFAULT_DATA.json" />
+		<EmbeddedResource Include="..\Resources\DEFAULT_DATA.json">
+			<LogicalName>LoneEftDmaRadar.DEFAULT_DATA.json</LogicalName>
+		</EmbeddedResource>
 		<Resource Include="..\Resources\lone-icon.ico" />
 	</ItemGroup>
 
