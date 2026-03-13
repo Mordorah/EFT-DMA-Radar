@@ -383,8 +383,15 @@ namespace LoneEftDmaRadar.UI.Controls
 
         private void ContentScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
-            var scrollViewer = (ScrollViewer)sender;
-            scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - e.Delta / 3.0);
+            try
+            {
+                if (sender is ScrollViewer scrollViewer && scrollViewer.IsLoaded)
+                    scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - e.Delta / 3.0);
+            }
+            catch
+            {
+                // Guard against layout race during content changes
+            }
             e.Handled = true;
         }
     }

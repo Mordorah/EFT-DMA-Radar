@@ -241,19 +241,20 @@
                                         CornerRadius="6"
                                         Padding="12,10">
                                     <DockPanel>
-                                        <StackPanel Orientation="Horizontal"
-                                                    DockPanel.Dock="Top"
-                                                    Margin="0,0,0,8">
+                                        <DockPanel DockPanel.Dock="Top"
+                                                   Margin="0,0,0,8"
+                                                   TextBlock.FontWeight="SemiBold"
+                                                   TextBlock.Foreground="{DynamicResource Neon.CyanBrush}">
                                             <Rectangle Width="2" Height="12"
                                                        RadiusX="1" RadiusY="1"
                                                        Fill="{DynamicResource Neon.CyanBrush}"
                                                        Margin="0,0,6,0"
-                                                       VerticalAlignment="Center"/>
-                                            <TextBlock Text="{TemplateBinding Header}"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource Neon.CyanBrush}"
-                                                       VerticalAlignment="Center"/>
-                                        </StackPanel>
+                                                       VerticalAlignment="Center"
+                                                       DockPanel.Dock="Left"/>
+                                            <ContentPresenter ContentSource="Header"
+                                                              VerticalAlignment="Center"
+                                                              RecognizesAccessKey="True"/>
+                                        </DockPanel>
                                         <ContentPresenter />
                                     </DockPanel>
                                 </Border>

@@ -12,49 +12,91 @@
                           IsDesignTimeCreatable="False" />
     </d:UserControl.DataContext>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Orientation="Vertical" Margin="0,0,0,10">
+    <StackPanel Orientation="Vertical" Margin="0,0,0,10">
 
-            <!-- General card -->
-            <GroupBox Header="General" Margin="0,0,0,8">
-                <StackPanel>
-                    <CheckBox Content="Enable Quest Helper"
-                              ToolTip="Enables quest tracking from game memory. Tracks your active quests and objectives."
-                              IsChecked="{Binding QuestHelperEnabled, Mode=TwoWay}"
-                              FontWeight="SemiBold"
-                              Margin="0,0,0,4" />
-                    <CheckBox Content="Show Quest Locations"
-                              ToolTip="Shows quest objective locations on the radar map (cyan markers)."
-                              IsChecked="{Binding QuestHelperShowLocations, Mode=TwoWay}"
-                              IsEnabled="{Binding QuestHelperEnabled}"
-                              Margin="0,0,0,4" />
-                </StackPanel>
-            </GroupBox>
+        <!-- General card -->
+        <GroupBox Header="General" Margin="0,0,0,8">
+            <StackPanel>
+                <CheckBox Content="Enable Quest Helper"
+                          ToolTip="Enables quest tracking from game memory. Tracks your active quests and objectives."
+                          IsChecked="{Binding QuestHelperEnabled, Mode=TwoWay}"
+                          FontWeight="SemiBold"
+                          Margin="0,0,0,4" />
+                <CheckBox Content="Show Quest Locations"
+                          ToolTip="Shows quest objective locations on the radar map (cyan markers)."
+                          IsChecked="{Binding QuestHelperShowLocations, Mode=TwoWay}"
+                          IsEnabled="{Binding QuestHelperEnabled}"
+                          Margin="0,0,0,4" />
+            </StackPanel>
+        </GroupBox>
 
-            <GroupBox Header="Active Quests"
-                      Margin="0,0,0,8">
-                <StackPanel>
-                    <TextBlock Text="Toggle quests on/off. Disabled quests won't show objectives on the radar."
-                               Margin="0,0,0,8"
-                               FontStyle="Italic" />
+        <!-- Status bar -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Content="Refresh Quest List"
+                    Click="RefreshButton_Click"
+                    Padding="6,2"
+                    Margin="0,0,12,0"
+                    HorizontalAlignment="Left" />
+            <TextBlock Text="{Binding ActiveQuestCount, Mode=OneWay}"
+                       FontWeight="Bold"
+                       Foreground="Orange"
+                       VerticalAlignment="Center" />
+            <TextBlock Text=" quests"
+                       VerticalAlignment="Center"
+                       Margin="0,0,8,0" />
+            <TextBlock Text="{Binding SourceText, Mode=OneWay}"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource App.TextMutedBrush}"
+                       FontStyle="Italic" />
+        </StackPanel>
 
-                    <Button Content="Refresh Quest List"
-                            Click="RefreshButton_Click"
-                            Padding="6,2"
-                            Margin="0,0,0,8"
-                            HorizontalAlignment="Left" />
-
-                    <TextBlock Margin="0,0,0,8">
-                        <Run Text="Active Quests: " />
-                        <Run Text="{Binding ActiveQuestCount, Mode=OneWay}"
-                             FontWeight="Bold"
-                             Foreground="Orange" />
-                    </TextBlock>
-
-                    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                  MaxHeight="400">
-                        <ListBox ItemsSource="{Binding ActiveQuests}"
-                                 Background="Transparent"
+        <!-- Per-map quest sections -->
+        <ItemsControl ItemsSource="{Binding MapGroups}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <GroupBox Margin="0,0,0,8">
+                        <GroupBox.Header>
+                            <DockPanel>
+                                <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                              DockPanel.Dock="Right"
+                                              Background="Transparent"
+                                              BorderThickness="0"
+                                              Padding="2,0"
+                                              Cursor="Hand"
+                                              ToolTip="Collapse/expand map section">
+                                    <ToggleButton.Style>
+                                        <Style TargetType="ToggleButton">
+                                            <Setter Property="Content" Value="▴" />
+                                            <Setter Property="Foreground" Value="{DynamicResource Neon.CyanBrush}" />
+                                            <Setter Property="FontSize" Value="12" />
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="ToggleButton">
+                                                        <Border Background="Transparent"
+                                                                Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="Center"
+                                                                              VerticalAlignment="Center" />
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsChecked" Value="False">
+                                                    <Setter Property="Content" Value="▾" />
+                                                </Trigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Foreground" Value="White" />
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ToggleButton.Style>
+                                </ToggleButton>
+                                <TextBlock Text="{Binding Header}" />
+                            </DockPanel>
+                        </GroupBox.Header>
+                        <StackPanel Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
+                        <ListBox ItemsSource="{Binding Quests}"
+                                 MaxHeight="300"
                                  ScrollViewer.CanContentScroll="True">
                             <ListBox.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -64,36 +106,110 @@
                             </ListBox.ItemsPanel>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Orientation="Horizontal">
-                                        <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                                                  ToolTip="Uncheck to hide quest objectives on radar"
-                                                  VerticalAlignment="Center"
-                                                  Margin="0,0,6,0" />
-                                        <TextBlock VerticalAlignment="Center">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsEnabled}" Value="False">
-                                                            <Setter Property="Opacity" Value="0.5" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                            <Run Text="{Binding DisplayName, Mode=OneWay}"
-                                                 FontWeight="SemiBold" />
-                                            <Run Text=" " />
-                                            <Run Text="{Binding Badges, Mode=OneWay}"
-                                                 Foreground="Orange"
-                                                 FontWeight="Bold" />
-                                        </TextBlock>
+                                    <StackPanel Margin="0,2,0,2">
+                                        <StackPanel Orientation="Horizontal">
+                                            <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                      ToolTip="Uncheck to hide quest objectives on radar"
+                                                      VerticalAlignment="Center"
+                                                      Margin="0,0,6,0" />
+                                            <TextBlock Text="{Binding DisplayName, Mode=OneWay}"
+                                                       VerticalAlignment="Center"
+                                                       FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding Badges, Mode=OneWay}"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="Orange"
+                                                       FontWeight="Bold"
+                                                       Margin="4,0,0,0" />
+                                        </StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Objectives}"
+                                                      Margin="24,2,0,0">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,1,0,1">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <!-- Type label -->
+                                                        <TextBlock Grid.Column="0"
+                                                                   Text="{Binding TypeLabel, Mode=OneWay}"
+                                                                   Foreground="{DynamicResource Neon.CyanBrush}"
+                                                                   FontSize="10"
+                                                                   FontWeight="Bold"
+                                                                   Width="55"
+                                                                   VerticalAlignment="Top"
+                                                                   Margin="0,1,4,0" />
+
+                                                        <!-- Description -->
+                                                        <TextBlock Grid.Column="1"
+                                                                   Text="{Binding Description, Mode=OneWay}"
+                                                                   Foreground="{DynamicResource App.TextMutedBrush}"
+                                                                   FontSize="11"
+                                                                   TextWrapping="Wrap"
+                                                                   VerticalAlignment="Top" />
+
+                                                        <!-- Progress counter -->
+                                                        <TextBlock Grid.Column="2"
+                                                                   Text="{Binding ProgressText, Mode=OneWay}"
+                                                                   Foreground="{DynamicResource Neon.CyanBrush}"
+                                                                   FontSize="11"
+                                                                   FontWeight="Bold"
+                                                                   VerticalAlignment="Top"
+                                                                   Margin="8,1,0,0" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </StackPanel>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                    </ScrollViewer>
-                </StackPanel>
-            </GroupBox>
 
-        </StackPanel>
-    </ScrollViewer>
+                        <!-- Bring into raid -->
+                        <StackPanel Visibility="{Binding HasBringItems, Converter={StaticResource BoolToVis}}"
+                                    Margin="0,6,0,0">
+                            <TextBlock Text="Bring Into Raid"
+                                       FontWeight="Bold"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource Neon.PurpleBrush}"
+                                       Margin="0,0,0,4" />
+                            <ItemsControl ItemsSource="{Binding BringItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,1,0,1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding Category, Mode=OneWay}"
+                                                       Foreground="{DynamicResource Neon.PurpleBrush}"
+                                                       FontSize="10"
+                                                       FontWeight="Bold"
+                                                       Width="55"
+                                                       Margin="0,0,4,0" />
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding ItemName, Mode=OneWay}"
+                                                       FontSize="11" />
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding QuestName, Mode=OneWay}"
+                                                       Foreground="{DynamicResource App.TextMutedBrush}"
+                                                       FontSize="10"
+                                                       FontStyle="Italic"
+                                                       Margin="8,0,0,0" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        </StackPanel>
+                    </GroupBox>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+    </StackPanel>
 </UserControl>

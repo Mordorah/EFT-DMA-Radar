@@ -171,6 +171,13 @@ namespace LoneEftDmaRadar
         
         protected override async void OnStartup(StartupEventArgs e)
         {
+            // Prevent WPF rendering/layout exceptions from crashing the app
+            DispatcherUnhandledException += (_, args) =>
+            {
+                UI.Misc.DebugLogger.LogDebug($"[WPF] Unhandled: {args.Exception.Message}");
+                args.Handled = true;
+            };
+
             try
             {
                 base.OnStartup(e);

@@ -691,6 +691,8 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld
         /// <summary>
         /// Checks if there is a Bot attached to the BTR Turret and re-allocates the player instance.
         /// </summary>
+        private bool _btrErrorLogged;
+
         public void TryAllocateBTR()
         {
             try
@@ -698,15 +700,25 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld
                 if (_rgtPlayers.Any(p => p is BtrPlayer))
                     return;
 
-                var btrController = Memory.ReadPtr(this + Offsets.GameWorld.BtrController);
-                var btrView = Memory.ReadPtr(btrController + Offsets.BtrController.BtrView);
-                var btrTurretView = Memory.ReadPtr(btrView + Offsets.BTRView.turret);
-                var btrOperator = Memory.ReadPtr(btrTurretView + Offsets.BTRTurretView.AttachedBot);
+                var btrController = Memory.ReadPtr(this + Offsets.GameWorld.BtrController, false);
+                if (btrController == 0) return;
+                var btrView = Memory.ReadPtr(btrController + Offsets.BtrController.BtrView, false);
+                if (btrView == 0) return;
+                var btrTurretView = Memory.ReadPtr(btrView + Offsets.BTRView.turret, false);
+                if (btrTurretView == 0) return;
+                var btrOperator = Memory.ReadPtr(btrTurretView + Offsets.BTRTurretView.AttachedBot, false);
+                if (btrOperator == 0) return;
+
                 _rgtPlayers.TryAllocateBTR(btrView, btrOperator);
+                _btrErrorLogged = false;
             }
             catch (Exception ex)
             {
-                DebugLogger.LogDebug($"ERROR Allocating BTR: {ex}");
+                if (!_btrErrorLogged)
+                {
+                    DebugLogger.LogDebug($"ERROR Allocating BTR: {ex.Message}");
+                    _btrErrorLogged = true;
+                }
             }
         }
 
