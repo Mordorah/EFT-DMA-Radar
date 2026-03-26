@@ -434,6 +434,13 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             SelectedItemToAdd = first;
         }
 
+        private bool _isItemDropdownOpen;
+        public bool IsItemDropdownOpen
+        {
+            get => _isItemDropdownOpen;
+            set { if (_isItemDropdownOpen != value) { _isItemDropdownOpen = value; OnPropertyChanged(); } }
+        }
+
         private string _itemSearchText;
         public string ItemSearchText
         {
@@ -445,6 +452,7 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
                 OnPropertyChanged();
                 _filteredItems.Refresh(); // refresh the filter
                 EnsureFirstItemSelected();
+                IsItemDropdownOpen = !string.IsNullOrWhiteSpace(value); // auto-open dropdown when searching
             }
         }
 
@@ -461,6 +469,10 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             };
 
             Entries.Add(entry);
+
+            // Immediately link the filter to the item so color changes take effect without restart
+            SelectedItemToAdd.SetFilter(entry);
+
             SelectedItemToAdd = null;
         }
 

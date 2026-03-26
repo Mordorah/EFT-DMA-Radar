@@ -385,6 +385,15 @@ namespace LoneEftDmaRadar.UI.Controls
 
         private void ContentScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
+            // If the mouse is over an inner scrollable control (ListBox, ScrollViewer, etc.),
+            // let the event bubble naturally so that control scrolls instead of this outer panel.
+            if (e.OriginalSource is DependencyObject source)
+            {
+                var innerScroller = FindParentScrollViewer(source, (ScrollViewer)sender);
+                if (innerScroller != null)
+                    return; // Don't handle — let the inner control scroll
+            }
+
             try
             {
                 if (sender is ScrollViewer scrollViewer && scrollViewer.IsLoaded)
@@ -395,6 +404,24 @@ namespace LoneEftDmaRadar.UI.Controls
                 // Guard against layout race during content changes
             }
             e.Handled = true;
+        }
+
+        /// <summary>
+        /// Walk up the visual tree from source looking for a ScrollViewer that isn't the outer panel scroller.
+        /// Returns null if no inner ScrollViewer is found before reaching the outer one.
+        /// </summary>
+        private static ScrollViewer FindParentScrollViewer(DependencyObject source, ScrollViewer outerScroller)
+        {
+            var current = source;
+            while (current != null && current != outerScroller)
+            {
+                if (current is ScrollViewer sv && sv != outerScroller)
+                    return sv;
+                if (current is ListBox)
+                    return new ScrollViewer(); // ListBox has a built-in ScrollViewer
+                current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+            }
+            return null;
         }
     }
 }
