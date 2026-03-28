@@ -214,21 +214,21 @@ namespace SDK
             public const uint _animators = 0x640; // IAnimator[] array
             public const uint EnabledAnimators = 0x670; // EAnimatorMask
             public const uint Corpse = 0x680; // EFT.Interactive.Corpse
-            public const uint Location = 0x870; // String
-            public const uint InteractableObject = 0x888; // InteractableObject
-            public const uint RaidId = 0x8D8; // int32_t - Raid instance ID
-            public const uint VoipID = 0x8F0; // Boolean
-            public const uint Id = 0x8F8; // int32_t
-            public const uint Profile = 0x900; // EFT.Profile
-            public const uint Physical = 0x918; // PhysicalBase
-            public const uint AIData = 0x940; // Pointer to AIData (for offline AI SpawnType detection)
-            public const uint _healthController = 0x960; // IHealthController
-            public const uint _inventoryController = 0x978; // EFT.PlayerInventoryController update
-            public const uint _handsController = 0x980; // EFT.PlayerHands update
-            public const uint _playerLookRaycastTransform = 0xA10; // UnityEngine.Transform
-            public const uint InteractionRayOriginOnStartOperation = 0xA1C; // UnityEngine.Vector3
-            public const uint InteractionRayDirectionOnStartOperation = 0xA28; // UnityEngine.Vector3
-            public const uint IsYourPlayer = 0xA89; // Boolean
+            public const uint Location = 0x878; // String
+            public const uint InteractableObject = 0x890; // InteractableObject
+            public const uint RaidId = 0x8E0; // int32_t - Raid instance ID
+            public const uint VoipID = 0x8F8; // Boolean
+            public const uint Id = 0x900; // int32_t
+            public const uint Profile = 0x908; // EFT.Profile
+            public const uint Physical = 0x920; // PhysicalBase
+            public const uint AIData = 0x948; // Pointer to AIData (for offline AI SpawnType detection)
+            public const uint _healthController = 0x968; // IHealthController
+            public const uint _inventoryController = 0x980; // EFT.PlayerInventoryController update
+            public const uint _handsController = 0x988; // EFT.PlayerHands update
+            public const uint _playerLookRaycastTransform = 0xA18; // UnityEngine.Transform
+            public const uint InteractionRayOriginOnStartOperation = 0xA24; // UnityEngine.Vector3
+            public const uint InteractionRayDirectionOnStartOperation = 0xA30; // UnityEngine.Vector3
+            public const uint IsYourPlayer = 0xA91; // Boolean
         }
 
         public readonly partial struct ObservedPlayerView
@@ -380,23 +380,23 @@ namespace SDK
 
         public readonly partial struct MovementContext // EFT, class: MovementContext
         {
-            public const uint Player = 0x48; // EFT.Player
-            public const uint _rotation = 0xC8; // UnityEngine.Vector2
-            public const uint PlantState = 0x78; // EFT.BaseMovementState <PlantState> PlantState
-            public const uint CurrentState = 0x1F0; // EFT.BaseMovementState <CurrentState>k__BackingField
-            public const uint _states = 0x480; // System.Collections.Generic.Dictionary<Byte, BaseMovementState> <_states> _states
-            public const uint _movementStates = 0x4b0; // -.IPlayerStateContainerBehaviour[] <_movementStates> _movementStates
-            public const uint _tilt = 0xb4; // Single <_tilt> _tilt
-            public const uint _physicalCondition = 0x198; // System.Int32 <_physicalCondition> _physicalCondition
-            public const uint _speedLimitIsDirty = 0x1b9; // Boolean <_speedLimitIsDirty> _speedLimitIsDirty
-            public const uint StateSpeedLimit = 0x1bc; // Single <<StateSpeedLimit>k__BackingField> <StateSpeedLimit>k__BackingField
-            public const uint StateSprintSpeedLimit = 0x1c0; // Single <<StateSprintSpeedLimit>k__BackingField> <StateSprintSpeedLimit>k__BackingField
-            public const uint _lookDirection = 0x3b8; // UnityEngine.Vector3  <_lookDirection> _lookDirection
-            public const uint WalkInertia = 0x4bC; // Single
-            public const uint SprintBrakeInertia = 0x4C0; // Single
-            public const uint _poseInertia = 0x4C4; // Single
-            public const uint _currentPoseInertia = 0x4C8; // Single
-            public const uint _inertiaAppliedTime = 0x26C; // Single
+            public const uint Player = 0x40; // EFT.Player
+            public const uint _rotation = 0xC0; // UnityEngine.Vector2
+            public const uint PlantState = 0x70; // EFT.BaseMovementState <PlantState> PlantState
+            public const uint CurrentState = 0x1E8; // EFT.BaseMovementState <CurrentState>k__BackingField
+            public const uint _states = 0x478; // System.Collections.Generic.Dictionary<Byte, BaseMovementState> <_states> _states
+            public const uint _movementStates = 0x4a8; // -.IPlayerStateContainerBehaviour[] <_movementStates> _movementStates
+            public const uint _tilt = 0xac; // Single <_tilt> _tilt
+            public const uint _physicalCondition = 0x190; // System.Int32 <_physicalCondition> _physicalCondition
+            public const uint _speedLimitIsDirty = 0x1b1; // Boolean <_speedLimitIsDirty> _speedLimitIsDirty
+            public const uint StateSpeedLimit = 0x1b4; // Single <<StateSpeedLimit>k__BackingField> <StateSpeedLimit>k__BackingField
+            public const uint StateSprintSpeedLimit = 0x1b8; // Single <<StateSprintSpeedLimit>k__BackingField> <StateSprintSpeedLimit>k__BackingField
+            public const uint _lookDirection = 0x3b0; // UnityEngine.Vector3  <_lookDirection> _lookDirection
+            public const uint WalkInertia = 0x4b4; // Single
+            public const uint SprintBrakeInertia = 0x4B8; // Single
+            public const uint _poseInertia = 0x4BC; // Single
+            public const uint _currentPoseInertia = 0x4C0; // Single
+            public const uint _inertiaAppliedTime = 0x264; // Single
         }
 
         public readonly partial struct MovementState //Class: MovementState
@@ -551,22 +551,22 @@ namespace SDK
             public const uint Breath = 0x38; // EFT.Animations.BreathEffector <Breath> Breath
             public const uint MotionReact = 0x48; // -.MotionEffector <MotionReact> MotionReact
             public const uint Shootingg = 0x58; // -.ShotEffector <Shootingg> Shootingg
-            public const uint _optics = 0x180; // System.Collections.Generic.List<ProceduralWeaponAnimation.SightNBone>
+            public const uint _optics = 0x1A8; // System.Collections.Generic.List<ProceduralWeaponAnimation.SightNBone>
             public const uint Mask = 0x30; // System.Int32 <Mask> Mask
-            public const uint IsAiming = 0x145; // Boolean
-            public const uint _isAiming = 0x145; // Boolean
+            public const uint IsAiming = 0x14D; // Boolean
+            public const uint _isAiming = 0x14D; // Boolean
             public const uint _fieldOfView = 0xA8; // Float
-            public const uint _aimingSpeed = 0x164; // Single <_aimingSpeed> _aimingSpeed
-            public const uint _fovCompensatoryDistance = 0x194; // Single <_fovCompensatoryDistance> _fovCompensatoryDistance
-            public const uint _compensatoryScale = 0x1c4; // Single <_compensatoryScale> _compensatoryScale
-            public const uint _shotDirection = 0x1c8; // UnityEngine.Vector3 <_shotDirection> _shotDirection
-            public const uint CameraSmoothOut = 0x20c; // Single <CameraSmoothOut> CameraSmoothOut
-            public const uint PositionZeroSum = 0x31c; // UnityEngine.Vector3 <PositionZeroSum> PositionZeroSum
-            public const uint ShotNeedsFovAdjustments = 0x433; // Boolean <<ShotNeedsFovAdjustments>k__BackingField> <ShotNeedsFovAdjustments>k__BackingField
-            public const uint _firearmController = 0x138; // Player.FirearmController reference
-            public const uint _overweightAimingMultiplier = 0x168; // Single — overweight turn speed multiplier
-            public const uint _ergonomicWeight = 0x38C; // Single — weapon ergonomic weight
-            public const uint _aimingWeight = 0x398; // Single — composite aiming weight
+            public const uint _aimingSpeed = 0x190; // Single <_aimingSpeed> _aimingSpeed
+            public const uint _fovCompensatoryDistance = 0x1BC; // Single <_fovCompensatoryDistance> _fovCompensatoryDistance
+            public const uint _compensatoryScale = 0x1EC; // Single <_compensatoryScale> _compensatoryScale
+            public const uint _shotDirection = 0x1F0; // UnityEngine.Vector3 <_shotDirection> _shotDirection
+            public const uint CameraSmoothOut = 0x234; // Single <CameraSmoothOut> CameraSmoothOut
+            public const uint _firearmController = 0x140; // Player.FirearmController reference
+            public const uint PositionZeroSum = 0x354; // UnityEngine.Vector3 <PositionZeroSum> PositionZeroSum
+            public const uint ShotNeedsFovAdjustments = 0x46B; // Boolean <<ShotNeedsFovAdjustments>k__BackingField> <ShotNeedsFovAdjustments>k__BackingField
+            public const uint _overweightAimingMultiplier = 0x194; // Single — overweight turn speed multiplier
+            public const uint _ergonomicWeight = 0x3C4; // Single — weapon ergonomic weight
+            public const uint _aimingWeight = 0x3D0; // Single — composite aiming weight
         }
 
         public readonly partial struct HandsContainer // PlayerSpring
