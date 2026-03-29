@@ -259,7 +259,7 @@ namespace SDK
 
         public readonly partial struct ObservedPlayerStateContext
         {
-            public const uint Rotation = 0x20; // UnityEngine.Vector2
+            public const uint Rotation = 0x28; // UnityEngine.Vector2
         }
 
           public readonly partial struct ObservedHealthController

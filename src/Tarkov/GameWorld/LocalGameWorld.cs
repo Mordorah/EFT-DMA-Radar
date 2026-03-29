@@ -273,6 +273,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld
                 {
                     var instance = GetLocalGameWorld(ct);
                     _lastInstantiationError = null; // Reset on success
+                    ObservedPlayer.ResetRaidState();
                     DebugLogger.LogDebug("Raid has started!");
                     return instance;
                 }

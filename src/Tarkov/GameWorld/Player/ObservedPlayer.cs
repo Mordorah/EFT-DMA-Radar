@@ -109,7 +109,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         /// <summary>
         /// MovementContext / StateContext
         /// </summary>
-        public override ulong MovementContext { get; }
+        public override ulong MovementContext { get; protected set; }
         /// <summary>
         /// Corpse field address..
         /// </summary>
@@ -117,7 +117,16 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         /// <summary>
         /// Player Rotation Field Address (view angles).
         /// </summary>
-        public override ulong RotationAddress { get; }
+        public override ulong RotationAddress { get; protected set; }
+
+        protected override void TryResolveRotation()
+        {
+            if (MovementContext == 0)
+                MovementContext = GetMovementContext();
+            if (MovementContext != 0)
+                RotationAddress = MovementContext + Offsets.ObservedPlayerStateContext.Rotation;
+        }
+
         /// <summary>
         /// Player's Current Health Status
         /// </summary>
@@ -155,12 +164,11 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
 
                 try
                 {
-                    // MovementContext is already the ObservedPlayerStateContext (ObservedMovementState)
-                    // Chain: MovementContext -> ObservedPlayerHands (0x130) -> Item (0x58)
-                    if (!MemDMA.IsValidVirtualAddress(MovementContext))
+                    // Chain: ObservedPlayerController -> HandsController (0x120) -> Item (0x58)
+                    if (!MemDMA.IsValidVirtualAddress(ObservedPlayerController))
                         return _cachedWeaponName;
 
-                    var observedHands = Memory.ReadPtr(MovementContext + Offsets.ObservedMovementState.ObservedPlayerHands, false);
+                    var observedHands = Memory.ReadPtr(ObservedPlayerController + Offsets.ObservedPlayerController.HandsController, false);
                     if (!MemDMA.IsValidVirtualAddress(observedHands))
                         return _cachedWeaponName;
 
@@ -219,6 +227,9 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
 
         #endregion
 
+        private static int _zryachiyCount;
+        public static void ResetRaidState() => _zryachiyCount = 0;
+
         internal ObservedPlayer(ulong playerBase, LocalGameWorld gameWorld) : base(playerBase)
         {
             _gameWorld = gameWorld;
@@ -232,7 +243,8 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
             CorpseAddr = ObservedHealthController + Offsets.ObservedHealthController._playerCorpse;
 
             MovementContext = GetMovementContext();
-            RotationAddress = ValidateRotationAddr(MovementContext + Offsets.ObservedPlayerStateContext.Rotation);
+            if (MovementContext != 0)
+                RotationAddress = MovementContext + Offsets.ObservedPlayerStateContext.Rotation;
             /// Setup Transform
             var ti = Memory.ReadPtrChain(this, false, _transformInternalChain);
             SkeletonRoot = new UnityTransform(ti);
@@ -272,7 +284,12 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                         // Fallback to voice parsing
                         var voicePtr = Memory.ReadPtr(this + Offsets.ObservedPlayerView.Voice);
                         string voice = Memory.ReadUnicodeString(voicePtr);
-                        var role = GetAIRoleInfo(voice);
+                        var role = GetAIRoleInfo(voice, _gameWorld?.MapID);
+                        // Zryachiy counter: first SectantPriest on Lighthouse = boss, rest = guards
+                        if (voice == "SectantPriest" && role.Name == "Zryachiy" && Interlocked.Increment(ref _zryachiyCount) > 1)
+                        {
+                            role = new AIRole { Name = "Zryachiy Guard", Type = PlayerType.AIRaider };
+                        }
                         Name = role.Name;
                         Type = role.Type;
 
@@ -523,8 +540,15 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         /// </summary>
         private ulong GetMovementContext()
         {
-            var movementController = Memory.ReadPtrChain(ObservedPlayerController, true, Offsets.ObservedPlayerController.MovementController, Offsets.ObservedMovementController.ObservedPlayerStateContext);
-            return movementController;
+            try
+            {
+                var movementController = Memory.ReadPtrChain(ObservedPlayerController, false, Offsets.ObservedPlayerController.MovementController, Offsets.ObservedMovementController.ObservedPlayerStateContext);
+                return MemDMA.IsValidVirtualAddress(movementController) ? movementController : 0;
+            }
+            catch
+            {
+                return 0;
+            }
         }
 
         private void SetupBones()

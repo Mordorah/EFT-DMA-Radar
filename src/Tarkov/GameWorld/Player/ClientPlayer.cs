@@ -26,6 +26,7 @@ SOFTWARE.
  *
 */
 
+using LoneEftDmaRadar.DMA;
 using LoneEftDmaRadar.Tarkov.GameWorld.Player.Helpers;
 using LoneEftDmaRadar.Tarkov.Unity.Collections;
 using LoneEftDmaRadar.Tarkov.Unity.Structures;
@@ -70,7 +71,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         /// <summary>
         /// MovementContext / StateContext
         /// </summary>
-        public override ulong MovementContext { get; }
+        public override ulong MovementContext { get; protected set; }
         /// <summary>
         /// Corpse field address..
         /// </summary>
@@ -78,7 +79,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         /// <summary>
         /// Player Rotation Field Address (view angles).
         /// </summary>
-        public override ulong RotationAddress { get; }
+        public override ulong RotationAddress { get; protected set; }
 
         /// <summary>
         /// Player's equipped gear (offline AI only).
@@ -110,6 +111,8 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                 try
                 {
                     var hands = Memory.ReadPtr(Base + Offsets.Player._handsController, false);
+                    if (!MemDMA.IsValidVirtualAddress(hands))
+                        return _cachedWeaponName;
 
                     if (hands != _lastHandsController)
                     {

@@ -341,7 +341,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         /// <summary>
         /// MovementContext / StateContext
         /// </summary>
-        public virtual ulong MovementContext { get; }
+        public virtual ulong MovementContext { get; protected set; }
 
         /// <summary>
         /// Corpse field address..
@@ -351,7 +351,12 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         /// <summary>
         /// Player Rotation Field Address (view angles).
         /// </summary>
-        public virtual ulong RotationAddress { get; }
+        public virtual ulong RotationAddress { get; protected set; }
+
+        /// <summary>
+        /// Attempt to resolve rotation address for culled players that weren't fully initialized.
+        /// </summary>
+        protected virtual void TryResolveRotation() { }
 
         /// <summary>
         /// Player's equipped gear (null if not available).
@@ -664,13 +669,16 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                 }
             }
 
-            scatter.PrepareReadValue<Vector2>(RotationAddress); // Rotation
+            if (RotationAddress == 0)
+                TryResolveRotation();
+            if (RotationAddress != 0)
+                scatter.PrepareReadValue<Vector2>(RotationAddress); // Rotation
             int requestedVertices = _verticesCount > 0 ? Math.Min(_verticesCount, actualRequired) : actualRequired;
             scatter.PrepareReadArray<TrsX>(SkeletonRoot.VerticesAddr, requestedVertices); // ESP Vertices
 
             scatter.Completed += (sender, s) =>
             {
-                bool successRot = s.ReadValue<Vector2>(RotationAddress, out var rotation) && SetRotation(rotation);
+                bool successRot = RotationAddress != 0 && s.ReadValue<Vector2>(RotationAddress, out var rotation) && SetRotation(rotation);
                 bool successPos = false;
 
                 if (s.ReadPooled<TrsX>(SkeletonRoot.VerticesAddr, requestedVertices) is IMemoryOwner<TrsX> vertices)
@@ -735,7 +743,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                     successPos = false;
                 }
 
-                bool hasError = !successRot || !successPos;
+                bool hasError = !successPos; // Rotation failure is tolerable — player stays on radar
                 if (hasError && !IsError)
                 {
                     ErrorTimer.Restart();
@@ -852,7 +860,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                 Enums.ESpawnType.Knight => new AIRole { Name = "Knight", Type = PlayerType.AIBoss },
                 Enums.ESpawnType.BigPipe => new AIRole { Name = "Big Pipe", Type = PlayerType.AIBoss },
                 Enums.ESpawnType.BirdEye => new AIRole { Name = "Birdeye", Type = PlayerType.AIBoss },
-                Enums.ESpawnType.Zryachiy => new AIRole { Name = "Zryachiy", Type = PlayerType.AIBoss },
+                Enums.ESpawnType.Zryachiy or Enums.ESpawnType.PeacefullZryachiyEvent or Enums.ESpawnType.RavangeZryachiyEvent => new AIRole { Name = "Zryachiy", Type = PlayerType.AIBoss },
                 Enums.ESpawnType.Kaban => new AIRole { Name = "Kaban", Type = PlayerType.AIBoss },
                 Enums.ESpawnType.Kolontay => new AIRole { Name = "Kollontay", Type = PlayerType.AIBoss },
                 Enums.ESpawnType.Partisan => new AIRole { Name = "Partisan", Type = PlayerType.AIBoss },
@@ -910,7 +918,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         /// </summary>
         /// <param name="voiceLine"></param>
         /// <returns></returns>
-        public static AIRole GetAIRoleInfo(string voiceLine)
+        public static AIRole GetAIRoleInfo(string voiceLine, string mapId = null)
         {
             switch (voiceLine)
             {
@@ -933,15 +941,17 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                         Type = PlayerType.AIBoss
                     };
                 case "SectantPriest":
+                    bool isLighthouse = mapId != null && mapId.Contains("lighthouse", StringComparison.OrdinalIgnoreCase);
                     return new AIRole
                     {
-                        Name = "Priest",
+                        Name = isLighthouse ? "Zryachiy" : "Priest",
                         Type = PlayerType.AIBoss
                     };
                 case "SectantWarrior":
+                    bool isLighthouseW = mapId != null && mapId.Contains("lighthouse", StringComparison.OrdinalIgnoreCase);
                     return new AIRole
                     {
-                        Name = "Cultist",
+                        Name = isLighthouseW ? "Zryachiy Guard" : "Cultist",
                         Type = PlayerType.AIRaider
                     };
                 case "BossKilla":
