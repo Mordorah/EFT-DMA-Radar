@@ -308,16 +308,10 @@ namespace LoneEftDmaRadar
 
         protected override void OnClosed(EventArgs e)
         {
-            try
-            {
-                base.OnClosed(e);
-            }
-            finally
-            {
-                // Force exit to ensure no background threads keep the process alive.
-                // Use finally to guarantee this runs even if cleanup code throws.
-                Environment.Exit(0);
-            }
+            base.OnClosed(e);
+            // Hard kill — Environment.Exit can hang if finalizers block (e.g. WPF/COM objects
+            // from ColorPicker or DataGrid). Process.Kill bypasses finalizers entirely.
+            System.Diagnostics.Process.GetCurrentProcess().Kill();
         }
 
         /// <summary>
@@ -354,6 +348,14 @@ namespace LoneEftDmaRadar
         /// </summary>
         protected override void OnClosing(CancelEventArgs e)
         {
+            // Failsafe: if shutdown hangs for any reason, hard-kill after 5 seconds.
+            // IsBackground=false so it survives runtime shutdown attempts.
+            new Thread(() =>
+            {
+                Thread.Sleep(5000);
+                System.Diagnostics.Process.GetCurrentProcess().Kill();
+            }) { IsBackground = false, Name = "ShutdownFailsafe" }.Start();
+
             try
             {
                 App.Config.UI.WindowSize = new Size(this.Width, this.Height);

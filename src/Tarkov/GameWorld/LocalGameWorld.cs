@@ -187,7 +187,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld
             {
                 Name = "Realtime Worker",
                 ThreadPriority = ThreadPriority.AboveNormal,
-                SleepDuration = TimeSpan.FromMilliseconds(8),
+                SleepDuration = TimeSpan.FromMilliseconds(3),
                 SleepMode = WorkerThreadSleepMode.DynamicSleep
             };
             _t1.PerformWork += RealtimeWorker_PerformWork;

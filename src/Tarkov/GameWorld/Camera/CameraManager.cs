@@ -44,6 +44,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
         private static float _fpsUpMag;
         private static float _opticRightMag;
         private static float _opticUpMag;
+        // EMA-smoothed 1x optic magnitudes (denominator for VP scaling)
         private static float _opticRightMag1x;
         private static float _opticUpMag1x;
         public static Vector3 CameraPosition => new(_viewMatrix.M14, _viewMatrix.M24, _viewMatrix.Translation.Z);
@@ -167,11 +168,9 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
 
                 if (useOptic)
                 {
-                    // Map optic VP's square projection to screen coordinates.
-                    // Divide by the 1x optic magnitude (scope circle size on screen),
-                    // NOT the current magnitude. The current magnitude encodes the zoom
-                    // (6x higher at 6x zoom), so preserving it gives correct zoom scaling.
-                    // Multiply by FPS magnitude to get screen-pixel scale.
+                    // Live FPS magnitude / EMA-smoothed 1x optic magnitude.
+                    // Live numerator tracks current FPS camera state (required for zoom).
+                    // Smoothed denominator eliminates single-sample sway capture drift.
                     x *= _fpsRightMag / _opticRightMag1x;
                     y *= _fpsUpMag / _opticUpMag1x;
                 }
@@ -406,12 +405,9 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                     OpticCameraPtr = 0;
                     ScopeZoom = 1f;
                     IsScoped = false;
-                    // Reset zoom calibration so it's re-derived fresh on next ADS cycle
-                    _maxOpticFov = 0f;
-                    _calibratedOpticPtr = 0;
-                    _opticRightMag1x = 0f;
-                    _opticUpMag1x = 0f;
-                        }
+                    // NOTE: Do NOT reset _opticRightMag1x/_opticUpMag1x or _maxOpticFov here.
+                    // They persist across ADS cycles so zoomed scopes work immediately.
+                }
 
                 // Read optics list first — determines if weapon has a sight or iron sights
                 if (IsADS)
@@ -512,15 +508,9 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                             _calibratedOpticPtr = OpticCameraPtr;
                         }
 
-                        // Track widest FOV = 1x zoom reference + capture 1x VP magnitudes
+                        // Track widest FOV = 1x zoom reference
                         if (opticFov > _maxOpticFov)
-                        {
                             _maxOpticFov = opticFov;
-                            if (_opticRightMag > 0.1f)
-                                _opticRightMag1x = _opticRightMag;
-                            if (_opticUpMag > 0.1f)
-                                _opticUpMag1x = _opticUpMag;
-                        }
 
                         // Compute zoom from FOV ratio
                         if (_maxOpticFov > 1f)
@@ -530,6 +520,30 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                             float zoom = MathF.Tan(baseHalfRad) / MathF.Tan(currHalfRad);
                             ScopeZoom = zoom;
                             IsScoped = zoom > 1.05f;
+                        }
+
+                        // EMA-smooth the 1x optic magnitudes instead of freezing a single sample.
+                        // Only update when at 1x zoom (FOV ≈ _maxOpticFov) so the values
+                        // capture the scope circle size, not the zoom magnification.
+                        const float EMA_ALPHA = 0.15f;
+                        const float FOV_1X_TOLERANCE = 0.5f;
+
+                        bool isAt1x = _maxOpticFov > 1f && MathF.Abs(opticFov - _maxOpticFov) < FOV_1X_TOLERANCE;
+
+                        if (isAt1x && _opticRightMag > 0.1f && _opticUpMag > 0.1f)
+                        {
+                            if (_opticRightMag1x < 0.1f)
+                            {
+                                // First sample: initialize directly
+                                _opticRightMag1x = _opticRightMag;
+                                _opticUpMag1x = _opticUpMag;
+                            }
+                            else
+                            {
+                                // EMA smooth: blend to wash out sway/orientation noise
+                                _opticRightMag1x += EMA_ALPHA * (_opticRightMag - _opticRightMag1x);
+                                _opticUpMag1x += EMA_ALPHA * (_opticUpMag - _opticUpMag1x);
+                            }
                         }
                     }
                 };
